@@ -107,7 +107,7 @@ function App() {
       );
       setCards(Array.isArray(saved.cards) ? saved.cards : []);
     } catch {
-      /* ignore invalid local preferences */
+      /* os dados locais inválidos ignoram-se: ficam os cartões vazios */
     }
   };
   useEffect(() => {

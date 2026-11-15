@@ -17,7 +17,6 @@
 .button:active:not(:disabled) {
   transform: scale(0.98);
 }
-.icon-button,
 .nav-item,
 .sidebar-logout,
 .mobile-nav button,
@@ -34,7 +33,6 @@
     color var(--motion-fast) var(--motion-ease),
     transform var(--motion-fast) var(--motion-ease);
 }
-.icon-button:active:not(:disabled),
 .nav-item:active:not(:disabled),
 .mobile-nav button:active:not(:disabled),
 .category-row button:active:not(:disabled),

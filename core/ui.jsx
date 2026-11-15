@@ -63,7 +63,7 @@ const iconCodepoints = {
 export function Brand({ small = false }) {
   return (
     <div className={`brand ${small ? "brand-small" : ""}`}>
-      <Image className="brand-logo" src={logoImage} alt="Bulir" priority />
+      <Image className="brand-logo" src={logoImage} alt="Bulir" priority={!small} />
     </div>
   );
 }
