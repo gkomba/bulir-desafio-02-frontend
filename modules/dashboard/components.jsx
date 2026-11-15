@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { assetUrl } from "../../core/api";
-import { optimizedUrl, srcSet } from "../../core/cloudinary";
-import { Icon } from "../../core/ui";
-import { statusLabel } from "../../core/adapters";
-import { date, dateTime, money } from "../../core/format";
+import { assetUrl } from "../../lib/api";
+import { optimizedUrl, srcSet } from "../../lib/cloudinary";
+import { Icon } from "../../components/Icon";
+import { statusLabel } from "../../lib/adapters";
+import { date, dateTime, money } from "../../lib/format";
 
 export function ServiceImage({ service, large = false }) {
   const [failed, setFailed] = useState(false);
   return service.imageUrl && !failed ? (
     // `<img>` e não `next/image`: o Cloudinary já entrega o tamanho, o formato e a qualidade certos
-    // (ver core/cloudinary.js), e o otimizador do Next voltaria a processar a imagem.
+    // (ver lib/cloudinary.ts), e o otimizador do Next voltaria a processar a imagem.
     // eslint-disable-next-line @next/next/no-img-element
     <img
       className={`service-image ${large ? "service-image-large" : ""}`}

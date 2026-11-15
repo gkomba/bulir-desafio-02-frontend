@@ -8,7 +8,7 @@ import React, {
   useState,
   useSyncExternalStore,
 } from "react";
-import { allPages, api, json, UNAUTHORIZED_EVENT } from "../../core/api";
+import { allPages, api, json, UNAUTHORIZED_EVENT } from "../../lib/api";
 import {
   cancelBooking,
   completeBooking,
@@ -16,18 +16,19 @@ import {
   newIdempotencyKey,
   placeBooking,
   toLocalInput,
-} from "../../core/bookings";
-import { uploadImage } from "../../core/images";
-import { addBalance, MAX_PAYMENT_KWANZAS } from "../../core/payments";
+} from "../../lib/bookings";
+import { uploadImage } from "../../lib/images";
+import { addBalance, MAX_PAYMENT_KWANZAS } from "../../lib/payments";
 import {
   createService,
   imageAuthorization,
   removeService,
   updateService,
-} from "../../core/services";
-import { toService, toTransaction, toUser } from "../../core/adapters";
-import { categories, money } from "../../core/format";
-import { Brand, Icon } from "../../core/ui";
+} from "../../lib/services";
+import { toService, toTransaction, toUser } from "../../lib/adapters";
+import { categories, money } from "../../lib/format";
+import { Brand } from "../../components/Brand";
+import { Icon } from "../../components/Icon";
 import Auth from "../auth/Auth";
 import ServiceForm from "./ServiceForm";
 import SettingsPage from "../settings/SettingsPage";

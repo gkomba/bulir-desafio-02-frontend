@@ -1,10 +1,10 @@
-import "../core/styles.css";
-import "../core/settings.css";
-import "../core/dashboard.css";
-import "../core/explore.css";
-import "../core/motion.css";
-import "../core/icons.css";
-import "../core/landing.css";
+import "../styles/styles.css";
+import "../styles/settings.css";
+import "../styles/dashboard.css";
+import "../styles/explore.css";
+import "../styles/motion.css";
+import "../styles/icons.css";
+import "../styles/landing.css";
 
 export const metadata = {
   title: "Presta-ja | Serviços perto de si",

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { api, json } from "../../core/api";
-import { toUser } from "../../core/adapters";
-import { Brand, Icon } from "../../core/ui";
+import { api, json } from "../../lib/api";
+import { toUser } from "../../lib/adapters";
+import { Brand } from "../../components/Brand";
+import { Icon } from "../../components/Icon";
 
 // O ecrã só aparece no navegador (o painel mostra um ecrã de carregamento até lá), por isso
 // pode ler o endereço logo no estado inicial, sem efeitos.

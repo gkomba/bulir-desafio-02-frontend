@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { assetUrl } from "../../core/api";
-import { categories } from "../../core/format";
-import { prepareImage } from "../../core/images";
-import { Icon } from "../../core/ui";
+import { assetUrl } from "../../lib/api";
+import { categories } from "../../lib/format";
+import { prepareImage } from "../../lib/images";
+import { Icon } from "../../components/Icon";
 import { FilterSelect } from "./components";
 
 const CATEGORY_OPTIONS = categories.slice(1).map((item) => ({

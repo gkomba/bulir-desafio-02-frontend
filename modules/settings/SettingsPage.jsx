@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Icon } from "../../core/ui";
+import { Icon } from "../../components/Icon";
 
 const copy = {
   pt: {
