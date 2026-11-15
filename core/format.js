@@ -15,4 +15,5 @@ export const categories = [
   "Saúde",
   "Eventos",
   "Automóvel",
+  "Outros",
 ];
