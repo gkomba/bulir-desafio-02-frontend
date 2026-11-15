@@ -14,6 +14,11 @@ const CATEGORY_LABELS = {
 export const categoryLabel = (category) =>
   CATEGORY_LABELS[category] ?? CATEGORY_LABELS.OTHER;
 
+// O inverso: o painel mostra "Casa" e a API guarda HOME.
+export const categoryCode = (label) =>
+  Object.keys(CATEGORY_LABELS).find((code) => CATEGORY_LABELS[code] === label) ??
+  "OTHER";
+
 export const toCents = (kwanzas) => Math.round(Number(kwanzas) * 100);
 const toKwanzas = (cents) => cents / 100;
 
@@ -33,7 +38,25 @@ export const toService = (service) => ({
   price: toKwanzas(service.priceCents),
   category: categoryLabel(service.category),
   providerId: service.providerId,
+  // A API não devolve o nome do prestador nos serviços.
+  providerName: "Prestador",
   imageUrl: service.imageUrl ?? undefined,
+});
+
+// O corpo para criar ou editar um serviço. `imageUrl`: um endereço põe ou muda a imagem,
+// `null` tira-a e ausente deixa-a como está.
+export const toServiceBody = ({
+  title,
+  description,
+  price,
+  category,
+  imageUrl,
+}) => ({
+  name: title.trim(),
+  description: description.trim(),
+  priceCents: toCents(price),
+  category: categoryCode(category),
+  ...(imageUrl !== undefined && { imageUrl }),
 });
 
 // Uma contratação é a transação que o histórico mostra.
