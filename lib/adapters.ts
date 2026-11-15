@@ -1,6 +1,19 @@
 // Converte os dados da API (desafio 1) para o formato que o painel usa.
 // A API guarda dinheiro em cêntimos; o painel mostra e edita Kwanzas.
-const CATEGORY_LABELS = {
+import type {
+  BookingDto,
+  BookingStatus,
+  CategoryCode,
+  CategoryLabel,
+  Service,
+  ServiceDto,
+  ServiceInput,
+  Transaction,
+  User,
+  UserDto,
+} from "../types/domain.ts";
+
+const CATEGORY_LABELS: Record<CategoryCode, CategoryLabel> = {
   HOME: "Casa",
   BEAUTY: "Beleza",
   TECHNOLOGY: "Tecnologia",
@@ -11,27 +24,29 @@ const CATEGORY_LABELS = {
   OTHER: "Outros",
 };
 
-export const categoryLabel = (category) =>
-  CATEGORY_LABELS[category] ?? CATEGORY_LABELS.OTHER;
+export const categoryLabel = (category: string | undefined): CategoryLabel =>
+  CATEGORY_LABELS[category as CategoryCode] ?? CATEGORY_LABELS.OTHER;
 
 // O inverso: o painel mostra "Casa" e a API guarda HOME.
-export const categoryCode = (label) =>
-  Object.keys(CATEGORY_LABELS).find((code) => CATEGORY_LABELS[code] === label) ??
-  "OTHER";
+export const categoryCode = (label: string): CategoryCode =>
+  (Object.keys(CATEGORY_LABELS) as CategoryCode[]).find(
+    (code) => CATEGORY_LABELS[code] === label,
+  ) ?? "OTHER";
 
-export const toCents = (kwanzas) => Math.round(Number(kwanzas) * 100);
-const toKwanzas = (cents) => cents / 100;
+export const toCents = (kwanzas: number | string): number =>
+  Math.round(Number(kwanzas) * 100);
+const toKwanzas = (cents: number): number => cents / 100;
 
-export const toUser = (user) => ({
+export const toUser = (user: UserDto): User => ({
   id: user.id,
   name: user.fullName,
   email: user.email,
-  nif: user.nif ?? undefined,
+  ...(user.nif ? { nif: user.nif } : {}),
   role: user.role,
   balance: toKwanzas(user.balanceCents),
 });
 
-export const toService = (service) => ({
+export const toService = (service: ServiceDto): Service => ({
   id: service.id,
   title: service.name,
   description: service.description,
@@ -40,18 +55,26 @@ export const toService = (service) => ({
   providerId: service.providerId,
   // A API não devolve o nome do prestador nos serviços.
   providerName: "Prestador",
-  imageUrl: service.imageUrl ?? undefined,
+  ...(service.imageUrl ? { imageUrl: service.imageUrl } : {}),
 });
 
 // O corpo para criar ou editar um serviço. `imageUrl`: um endereço põe ou muda a imagem,
 // `null` tira-a e ausente deixa-a como está.
+export interface ServiceBody {
+  name: string;
+  description: string;
+  priceCents: number;
+  category: CategoryCode;
+  imageUrl?: string | null;
+}
+
 export const toServiceBody = ({
   title,
   description,
   price,
   category,
   imageUrl,
-}) => ({
+}: ServiceInput): ServiceBody => ({
   name: title.trim(),
   description: description.trim(),
   priceCents: toCents(price),
@@ -60,7 +83,7 @@ export const toServiceBody = ({
 });
 
 // Uma contratação é a transação que o histórico mostra.
-export const toTransaction = (booking) => ({
+export const toTransaction = (booking: BookingDto): Transaction => ({
   id: booking.id,
   serviceTitle: booking.serviceName,
   providerId: booking.providerId,
@@ -73,9 +96,10 @@ export const toTransaction = (booking) => ({
   createdAt: booking.createdAt,
 });
 
-const STATUS_LABELS = {
+const STATUS_LABELS: Record<BookingStatus, string> = {
   CONFIRMED: "Confirmada",
   COMPLETED: "Concluída",
   CANCELLED: "Cancelada",
 };
-export const statusLabel = (status) => STATUS_LABELS[status] ?? status;
+export const statusLabel = (status: BookingStatus): string =>
+  STATUS_LABELS[status] ?? status;

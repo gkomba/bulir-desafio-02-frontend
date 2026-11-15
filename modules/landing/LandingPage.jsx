@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Brand, Icon } from "../../core/ui";
+import { Brand } from "../../components/Brand";
+import { Icon } from "../../components/Icon";
 
 const content = {
   client: {

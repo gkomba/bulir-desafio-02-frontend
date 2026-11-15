@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { fitWithin, SIDES, uploadErrorMessage } from "./images.js";
+import { fitWithin, SIDES, uploadErrorMessage } from "./images.ts";
 
 describe("fitWithin: reduzir o lado maior, sem nunca ampliar", () => {
   it("uma imagem larga reduz a largura e mantém a proporção", () => {
@@ -34,7 +34,7 @@ describe("fitWithin: reduzir o lado maior, sem nunca ampliar", () => {
 });
 
 describe("uploadErrorMessage: a recusa do Cloudinary em português", () => {
-  const cases = [
+  const cases: [number, string, RegExp][] = [
     [400, "Image file format gif not allowed", /formato/],
     [400, "File size too large", /grande/],
     [401, "Invalid Signature", /expirou/],

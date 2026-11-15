@@ -4,20 +4,24 @@ const UPLOAD = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(.+)$/;
 
 // Larguras, em píxeis, em que se pede cada imagem. Poucos escalões, e não "o tamanho exato" de cada
 // sítio, para a rede de distribuição guardar poucas versões e reaproveitá-las entre ecrãs.
-export const WIDTH_STEPS = [320, 480, 720, 1080, 1440];
+export const WIDTH_STEPS = [320, 480, 720, 1080, 1440] as const;
 
 // Só as imagens do Cloudinary se transformam; qualquer outro endereço segue como está.
-export const isCloudinaryUrl = (url) => UPLOAD.test(url ?? "");
+export const isCloudinaryUrl = (url: string | undefined): boolean =>
+  UPLOAD.test(url ?? "");
 
 // A imagem com a largura máxima pedida, sem recortar nem ampliar (`c_limit`).
-export const optimizedUrl = (url, width) => {
-  const match = UPLOAD.exec(url ?? "");
+export const optimizedUrl = (url: string, width: number): string => {
+  const match = UPLOAD.exec(url);
   if (!match) return url;
   return `${match[1]}c_limit,w_${width},q_auto,f_auto/${match[2]}`;
 };
 
 // O `srcset`: o navegador escolhe o escalão que serve ao tamanho e à densidade do ecrã.
-export const srcSet = (url, widths = WIDTH_STEPS) =>
+export const srcSet = (
+  url: string,
+  widths: readonly number[] = WIDTH_STEPS,
+): string | undefined =>
   isCloudinaryUrl(url)
     ? widths.map((width) => `${optimizedUrl(url, width)} ${width}w`).join(", ")
     : undefined;

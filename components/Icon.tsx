@@ -1,6 +1,5 @@
-import Image from "next/image";
-import logoImage from "../assets/logo.png";
-
+// Os ícones são os da fonte Material Design Icons: cada nome do painel aponta para um glifo da
+// fonte, e cada glifo tem o seu código. O TypeScript garante que todos os glifos têm código.
 const iconGlyphs = {
   account_balance_wallet: "wallet",
   add: "plus",
@@ -44,7 +43,8 @@ const iconGlyphs = {
   support_agent: "face-agent",
   trending_up: "trending-up",
   verified_user: "shield-check",
-};
+} as const;
+
 const iconCodepoints = {
   wallet: 984452, plus: 984085, "arrow-right": 983124, "arrow-top-right": 983132,
   "arrow-up": 983133, "auto-fix": 983144, check: 983340, "check-circle": 984544,
@@ -58,24 +58,14 @@ const iconCodepoints = {
   "map-marker": 983882, "cash-multiple": 984039, "face-woman": 987695,
   school: 984153, "medical-bag": 983887, "calendar-star": 983300, car: 983243,
   "account-circle": 983046,
-};
+} as const satisfies Record<(typeof iconGlyphs)[keyof typeof iconGlyphs], number>;
 
-export function Brand({ small = false }) {
-  return (
-    <div className={`brand ${small ? "brand-small" : ""}`}>
-      <Image className="brand-logo" src={logoImage} alt="Bulir" priority={!small} />
-    </div>
-  );
-}
+export type IconName = keyof typeof iconGlyphs;
 
-export function Icon({ name, className = "" }) {
-  const glyphName = iconGlyphs[name] ?? "help";
-  const glyph = iconCodepoints[glyphName];
+export function Icon({ name, className = "" }: { name: IconName; className?: string }) {
+  const glyph = iconCodepoints[iconGlyphs[name]];
   return (
-    <span
-      aria-hidden="true"
-      className={`material-design-icon ${className}`}
-    >
+    <span aria-hidden="true" className={`material-design-icon ${className}`}>
       {String.fromCodePoint(glyph)}
     </span>
   );

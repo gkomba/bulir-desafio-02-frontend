@@ -1,16 +1,22 @@
 // Imagens dos serviços. A foto é reduzida e comprimida no navegador antes de sair, e enviada
 // diretamente ao Cloudinary com a assinatura da API: o ficheiro nunca passa pelo nosso servidor.
+import type { UploadAuthorization } from "../types/domain.ts";
 
 // O lado maior, em píxeis, na primeira tentativa e nas seguintes. Nunca se amplia.
-export const SIDES = [1280, 1024, 800];
+export const SIDES = [1280, 1024, 800] as const;
 // A qualidade JPEG de cada tentativa, da melhor para a pior.
-export const QUALITIES = [0.8, 0.7, 0.6, 0.5, 0.4];
+export const QUALITIES = [0.8, 0.7, 0.6, 0.5, 0.4] as const;
 // O tamanho a que se quer chegar, e o máximo que ainda se envia.
 export const TARGET_BYTES = 450_000;
 export const MAX_UPLOAD_BYTES = 8_000_000;
 
+export interface Size {
+  width: number;
+  height: number;
+}
+
 // As dimensões depois de reduzir o lado maior a `maxSide`, mantendo a proporção.
-export const fitWithin = (width, height, maxSide) => {
+export const fitWithin = (width: number, height: number, maxSide: number): Size => {
   const longest = Math.max(width, height);
   if (longest <= maxSide) return { width, height };
   const scale = maxSide / longest;
@@ -20,7 +26,7 @@ export const fitWithin = (width, height, maxSide) => {
   };
 };
 
-const toBlob = (canvas, quality) =>
+const toBlob = (canvas: HTMLCanvasElement, quality: number): Promise<Blob> =>
   new Promise((resolve, reject) =>
     canvas.toBlob(
       (blob) =>
@@ -41,17 +47,17 @@ export class ImageTooLargeError extends Error {
 // até caber em TARGET_BYTES. Cada tentativa parte do original, para a qualidade não se perder em
 // recodificações sucessivas. O JPEG novo não leva os metadados da câmara (EXIF), por isso a
 // localização onde a foto foi tirada nunca sai do computador ou do telemóvel.
-export async function prepareImage(file) {
+export async function prepareImage(file: File): Promise<Blob> {
   if (!file.type.startsWith("image/")) {
     throw new Error("Escolha um ficheiro de imagem.");
   }
-  let bitmap;
+  let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   } catch {
     throw new Error("Não foi possível ler essa imagem. Experimente JPG, PNG ou WebP.");
   }
-  let best = null;
+  let best: Blob | null = null;
   let triedOriginalSize = false;
   try {
     for (const side of SIDES) {
@@ -66,6 +72,7 @@ export async function prepareImage(file) {
       canvas.width = width;
       canvas.height = height;
       const context = canvas.getContext("2d");
+      if (!context) throw new Error("Não foi possível ler a imagem.");
       // O JPEG não tem transparência: sem um fundo, um PNG ou WebP transparente ficava preto.
       context.fillStyle = "#fff";
       context.fillRect(0, 0, width, height);
@@ -83,8 +90,15 @@ export async function prepareImage(file) {
   return best;
 }
 
+interface CloudinaryError {
+  error?: { message?: string };
+}
+
 // Traduz a recusa do Cloudinary para uma mensagem que a pessoa percebe.
-export const uploadErrorMessage = (status, body) => {
+export const uploadErrorMessage = (
+  status: number,
+  body: CloudinaryError | null,
+): string => {
   const text = String(body?.error?.message ?? "");
   if (/format .* not allowed/i.test(text))
     return "Esse formato de imagem não é aceite. Use JPG, PNG ou WebP.";
@@ -97,7 +111,11 @@ export const uploadErrorMessage = (status, body) => {
 };
 
 // Envia a imagem ao Cloudinary (XMLHttpRequest, porque dá o progresso) e devolve o endereço seguro.
-export const uploadImage = (blob, auth, onProgress = () => {}) =>
+export const uploadImage = (
+  blob: Blob,
+  auth: UploadAuthorization,
+  onProgress: (fraction: number) => void = () => {},
+): Promise<string> =>
   new Promise((resolve, reject) => {
     const form = new FormData();
     form.append("api_key", auth.apiKey);
@@ -115,7 +133,7 @@ export const uploadImage = (blob, auth, onProgress = () => {}) =>
         onProgress(event.loaded / event.total);
     };
     request.onload = () => {
-      let body = null;
+      let body: (CloudinaryError & { secure_url?: string }) | null = null;
       try {
         body = JSON.parse(request.responseText);
       } catch {

@@ -8,7 +8,8 @@ import {
   toServiceBody,
   toTransaction,
   toUser,
-} from "./adapters.js";
+} from "./adapters.ts";
+import type { BookingDto, ServiceInput } from "../types/domain.ts";
 
 describe("categorias", () => {
   it("cada código da API tem o seu nome e volta ao mesmo código", () => {
@@ -33,7 +34,7 @@ describe("dinheiro: Kwanzas no painel, cêntimos na API", () => {
 });
 
 describe("toServiceBody", () => {
-  const base = { title: "  Canalização ", description: " Fugas ", price: 150.5, category: "Casa" };
+  const base: ServiceInput = { title: "  Canalização ", description: " Fugas ", price: 150.5, category: "Casa" };
 
   it("monta o corpo da API com o texto aparado", () => {
     assert.deepEqual(toServiceBody(base), {
@@ -69,7 +70,8 @@ describe("dados da API para o painel", () => {
   });
 
   it("reserva: vira uma transação com o valor em Kwanzas", () => {
-    const tx = toTransaction({ id: "b1", serviceName: "Pintura", providerId: "p", providerName: "Rui", clientId: "c", clientName: "Ana", priceCents: 250000, status: "CONFIRMED", createdAt: "2026-11-15T10:00:00Z" });
+    const booking: BookingDto = { id: "b1", serviceId: "s1", serviceName: "Pintura", providerId: "p", providerName: "Rui", clientId: "c", clientName: "Ana", priceCents: 250000, status: "CONFIRMED", scheduledAt: "2026-12-01T10:00:00Z", createdAt: "2026-11-15T10:00:00Z" };
+    const tx = toTransaction(booking);
     assert.equal(tx.serviceTitle, "Pintura");
     assert.equal(tx.amount, 2500);
   });
