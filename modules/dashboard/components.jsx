@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { assetUrl } from "../../core/api";
 import { Icon } from "../../core/ui";
 import { statusLabel } from "../../core/adapters";
-import { date, money } from "../../core/format";
+import { date, dateTime, money } from "../../core/format";
 
 export function ServiceImage({ service, large = false }) {
   const [failed, setFailed] = useState(false);
@@ -67,7 +67,7 @@ export function ServiceCard({ service, onClick }) {
 
 // O histórico de contratações: serviço, cliente, prestador, quando, estado e valor. Com `onCancel`
 // (cliente) e `onComplete` (prestador), as contratações confirmadas ganham a sua ação.
-export function TransactionTable({ rows, isClient, onCancel, onComplete }) {
+export function TransactionTable({ rows, isClient, busy = false, onCancel, onComplete }) {
   if (!rows.length)
     return (
       <Empty
@@ -99,7 +99,7 @@ export function TransactionTable({ rows, isClient, onCancel, onComplete }) {
               </td>
               <td>{tx.clientName}</td>
               <td>{tx.providerName}</td>
-              <td>{date(tx.scheduledAt)}</td>
+              <td>{dateTime(tx.scheduledAt)}</td>
               <td>
                 <span className={`status-pill is-${tx.status.toLowerCase()}`}>
                   <i /> {statusLabel(tx.status)}
@@ -114,6 +114,7 @@ export function TransactionTable({ rows, isClient, onCancel, onComplete }) {
                     <button
                       type="button"
                       className="button button-outline table-action"
+                      disabled={busy}
                       aria-label={`${isClient ? "Cancelar" : "Concluir"} ${tx.serviceTitle}`}
                       onClick={() => act(tx)}
                     >

@@ -423,6 +423,8 @@ function App() {
       ];
 
   const refreshUser = async () => setUser(toUser(await api("/auth/me")));
+  // A Idempotency-Key da contratação só fica gravada quando a reserva é criada: uma recusa (sem
+  // saldo, data inválida) não deixa nada guardado, e repetir com a mesma chave é seguro.
   const completeHire = async (service) => {
     const scheduled = new Date(hireWhen);
     if (Number.isNaN(scheduled.getTime()) || scheduled <= new Date()) {
@@ -484,15 +486,23 @@ function App() {
       try {
         await addBalance(amount, walletAttempt.current.key);
       } catch (e) {
-        refused = e.status >= 400 && e.status < 500 && e.status !== 408 && e.status !== 429;
+        // Só estas recusas são certas: 402 (o pagamento ficou gravado como falhado, e repetir com a
+        // mesma chave devolveria o mesmo) e 400 ou 422 (nada foi criado). Tudo o resto (rede,
+        // servidor, conflito, pedido em curso) é incerto: a chave mantém-se, para não cobrar duas vezes.
+        refused = [400, 402, 422].includes(e.status);
         throw e;
       }
-      await refreshUser();
       element.reset();
     }, "Saldo adicionado.");
     walletActionInProgressRef.current = false;
     if (succeeded || refused) walletAttempt.current = null;
-    if (succeeded && notificationSoundEnabledRef.current) playNotificationSound();
+    if (succeeded) {
+      // O pagamento já correu bem: se só a recarga do saldo falhar, diz-se, sem parecer que falhou.
+      await refreshUser().catch(() =>
+        setError("Saldo adicionado, mas não foi possível atualizar o saldo. Recarregue a página."),
+      );
+      if (notificationSoundEnabledRef.current) playNotificationSound();
+    }
   };
   const startEditing = (service) => {
     setEditingService(service);
@@ -1048,6 +1058,7 @@ function App() {
               <TransactionTable
                 rows={mine}
                 isClient={isClient}
+                busy={busy}
                 onCancel={askCancel}
                 onComplete={complete}
               />
