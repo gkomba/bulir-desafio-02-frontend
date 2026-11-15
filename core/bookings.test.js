@@ -29,6 +29,13 @@ describe("Idempotency-Key", () => {
     assert.match(key, /^[A-Za-z0-9_-]{1,64}$/);
   });
 
+  it("sem randomUUID (http fora de localhost), gera uma chave válida na mesma", () => {
+    const sem = { getRandomValues: (bytes) => bytes.fill(171) };
+    const key = newIdempotencyKey(sem);
+    assert.equal(key, "ab".repeat(16));
+    assert.match(key, /^[A-Za-z0-9_-]{1,64}$/);
+  });
+
   it("cada tentativa tem a sua chave", () => {
     assert.notEqual(newIdempotencyKey(), newIdempotencyKey());
   });

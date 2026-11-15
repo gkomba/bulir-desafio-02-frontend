@@ -5,7 +5,13 @@ import { toTransaction } from "./adapters.js";
 // A API pede uma Idempotency-Key: repetir o pedido com a mesma chave (por exemplo, com a rede a
 // falhar a meio) devolve a mesma reserva em vez de cobrar duas vezes. Uma chave nova por tentativa
 // de contratação, que se mantém enquanto a tentativa não correr bem.
-export const newIdempotencyKey = () => crypto.randomUUID();
+// `crypto.randomUUID` só existe em contextos seguros (https ou localhost): noutros, gera-se uma
+// chave de 32 caracteres hexadecimais com `getRandomValues`, que existe sempre.
+export const newIdempotencyKey = (cryptoApi = globalThis.crypto) => {
+  if (typeof cryptoApi.randomUUID === "function") return cryptoApi.randomUUID();
+  const bytes = cryptoApi.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+};
 
 export const placeBooking = (serviceId, scheduledAt, idempotencyKey) =>
   api("/bookings", {
