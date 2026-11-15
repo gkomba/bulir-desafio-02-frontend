@@ -9,6 +9,13 @@ import React, {
   useSyncExternalStore,
 } from "react";
 import { allPages, api, json, UNAUTHORIZED_EVENT } from "../../core/api";
+import { uploadImage } from "../../core/images";
+import {
+  createService,
+  imageAuthorization,
+  removeService,
+  updateService,
+} from "../../core/services";
 import { toService, toTransaction, toUser } from "../../core/adapters";
 import { categories, money } from "../../core/format";
 import {
@@ -17,6 +24,7 @@ import {
 } from "../../core/notification-sound";
 import { Brand, Icon } from "../../core/ui";
 import Auth from "../auth/Auth";
+import ServiceForm from "./ServiceForm";
 import SettingsPage from "../settings/SettingsPage";
 import {
   Empty,
@@ -59,7 +67,13 @@ function App() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("relevance");
   const [category, setCategory] = useState("Todos");
-  const [newServiceCategory, setNewServiceCategory] = useState(categories[1]);
+  // Serviço em edição (null = a criar um novo) e a chave que reinicia o formulário.
+  const [editingService, setEditingService] = useState(null);
+  const [formKey, setFormKey] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [removeCandidate, setRemoveCandidate] = useState(null);
+  // A imagem já enviada: se guardar o serviço falhar, tentar de novo não a reenvia.
+  const uploadedImage = useRef(null);
   const [explorePage, setExplorePage] = useState(1);
   const [selected, setSelected] = useState(null);
   const [hireCandidate, setHireCandidate] = useState(null);
@@ -201,6 +215,14 @@ function App() {
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [confirmLogout]);
   useEffect(() => {
+    if (!removeCandidate) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setRemoveCandidate(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [removeCandidate]);
+  useEffect(() => {
     if (!hireCandidate) return undefined;
     const closeOnEscape = (event) => {
       if (event.key === "Escape") setHireCandidate(null);
@@ -283,20 +305,26 @@ function App() {
   );
   const total = mine.reduce((sum, tx) => sum + tx.amount, 0);
 
+  // Devolve true se a operação correu bem. Se só a recarga da lista falhar, a operação já foi
+  // feita (e quem chamou deve tratá-la como feita: repetir criaria um serviço em duplicado).
   const action = async (work, success) => {
     setBusy(true);
     setError("");
     try {
       await work();
-      if (success) setToast(success);
-      await load(user);
-      return true;
     } catch (e) {
       setError(e.message);
-      return false;
-    } finally {
       setBusy(false);
+      return false;
     }
+    if (success) setToast(success);
+    try {
+      await load(user);
+    } catch (e) {
+      setError(e.message);
+    }
+    setBusy(false);
+    return true;
   };
   const markAllNotificationsRead = async () => {
     setNotificationsBusy(true);
@@ -419,23 +447,47 @@ function App() {
       }
     }
   };
-  const createService = async (event) => {
-    event.preventDefault();
-    const element = event.currentTarget;
-    const form = new FormData(element);
-    await action(async () => {
-      await api(
-        "/services",
-        json("POST", {
-          title: form.get("title"),
-          description: form.get("description"),
-          price: Number(String(form.get("price")).replace(",", ".")),
-          category: form.get("category"),
-        }),
-      );
-      element.reset();
-      setNewServiceCategory(categories[1]);
-    }, "Serviço publicado.");
+  const startEditing = (service) => {
+    setEditingService(service);
+    setFormKey((key) => key + 1);
+  };
+  const stopEditing = () => {
+    setEditingService(null);
+    setFormKey((key) => key + 1);
+    uploadedImage.current = null;
+  };
+  // Cria ou atualiza o serviço. A imagem só sai do navegador agora: vai direta ao Cloudinary com a
+  // assinatura da API, e o endereço que ele devolve é o que se guarda no serviço.
+  const saveService = async (data, image) => {
+    const saved = await action(
+      async () => {
+        let imageUrl;
+        if (image.kind === "remove") imageUrl = null;
+        if (image.kind === "new") {
+          if (uploadedImage.current?.blob !== image.blob) {
+            setUploadProgress(0);
+            const auth = await imageAuthorization();
+            const url = await uploadImage(image.blob, auth, setUploadProgress);
+            uploadedImage.current = { blob: image.blob, url };
+          }
+          imageUrl = uploadedImage.current.url;
+        }
+        const payload = { ...data, imageUrl };
+        if (editingService) await updateService(editingService.id, payload);
+        else await createService(payload);
+      },
+      editingService ? "Serviço atualizado." : "Serviço publicado.",
+    );
+    setUploadProgress(null);
+    if (saved) {
+      uploadedImage.current = null;
+      stopEditing();
+    }
+  };
+  const deleteService = async (service) => {
+    setRemoveCandidate(null);
+    if (editingService?.id === service.id) stopEditing();
+    await action(() => removeService(service.id), "Serviço removido.");
   };
 
   return (
@@ -933,22 +985,26 @@ function App() {
                         service={service}
                         onClick={() => setSelected(service)}
                       />
-                      <button
-                        type="button"
-                        className="button button-danger button-wide delete-service"
-                        disabled={busy}
-                        onClick={() =>
-                          action(
-                            () =>
-                              api(`/services/${service.id}`, {
-                                method: "DELETE",
-                              }),
-                            "Serviço removido.",
-                          )
-                        }
-                      >
-                        Remover serviço
-                      </button>
+                      <div className="service-actions">
+                        <button
+                          type="button"
+                          className="button button-outline"
+                          disabled={busy}
+                          aria-label={`Editar ${service.title}`}
+                          onClick={() => startEditing(service)}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="button button-danger delete-service"
+                          disabled={busy}
+                          aria-label={`Remover ${service.title}`}
+                          onClick={() => setRemoveCandidate(service)}
+                        >
+                          Remover
+                        </button>
+                      </div>
                     </article>
                   ))}
                   {!services.length && (
@@ -958,62 +1014,14 @@ function App() {
                     />
                   )}
                 </div>
-                <form className="panel create-form" onSubmit={createService}>
-                  <span className="eyebrow">NOVO SERVIÇO</span>
-                  <h2>Publicar serviço</h2>
-                  <label>
-                    Título
-                    <input
-                      name="title"
-                      required
-                      minLength="3"
-                      maxLength="80"
-                      placeholder="Ex.: Canalização residencial"
-                    />
-                  </label>
-                  <div className="create-filter-field">
-                    <span>Categoria</span>
-                    <FilterSelect
-                      name="category"
-                      label="Categoria"
-                      value={newServiceCategory}
-                      onChange={setNewServiceCategory}
-                      options={categories.slice(1).map((item) => ({
-                        value: item,
-                        label: item,
-                      }))}
-                    />
-                  </div>
-                  <label>
-                    Descrição
-                    <textarea
-                      name="description"
-                      required
-                      minLength="10"
-                      maxLength="500"
-                      rows="4"
-                      placeholder="Descreva o serviço que oferece"
-                    />
-                  </label>
-                  <label>
-                    Preço em Kz
-                    <input
-                      name="price"
-                      type="number"
-                      required
-                      min="1"
-                      step="any"
-                      placeholder="Ex.: 8 000"
-                    />
-                  </label>
-                  <button
-                    className="button button-primary button-wide"
-                    disabled={busy}
-                  >
-                    Publicar serviço{" "}
-                    <Icon name="arrow_forward" className="button-icon" />
-                  </button>
-                </form>
+                <ServiceForm
+                  key={formKey}
+                  editing={editingService}
+                  busy={busy}
+                  progress={uploadProgress}
+                  onSubmit={saveService}
+                  onCancel={stopEditing}
+                />
               </div>
             </>
           )}
@@ -1195,6 +1203,42 @@ function App() {
                 {busy
                   ? language === "en" ? "Booking…" : "A contratar…"
                   : language === "en" ? "Confirm booking" : "Confirmar"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+      {removeCandidate && (
+        <div
+          className="modal-backdrop logout-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setRemoveCandidate(null);
+          }}
+        >
+          <section
+            className="logout-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="remove-title"
+          >
+            <span className="logout-modal-icon"><Icon name="close" /></span>
+            <h2 id="remove-title">Remover o serviço?</h2>
+            <p>
+              O serviço <b>{removeCandidate.title}</b> deixa de aparecer aos
+              clientes. Esta ação não pode ser desfeita.
+            </p>
+            <div className="logout-modal-actions">
+              <button
+                className="button button-outline"
+                onClick={() => setRemoveCandidate(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="button button-danger"
+                onClick={() => deleteService(removeCandidate)}
+              >
+                Remover
               </button>
             </div>
           </section>

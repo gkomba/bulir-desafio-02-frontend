@@ -7,3 +7,65 @@
     min-width: 0;
   }
 }
+
+/* Serviços do prestador: editar e remover, lado a lado */
+.service-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.service-actions .button {
+  height: 42px;
+  margin-top: 0;
+  border-radius: 0;
+}
+.service-actions .button-outline {
+  border-width: 1px 1px 0 0;
+}
+
+/* Escolha da imagem do serviço */
+.image-field {
+  display: grid;
+  gap: 7px;
+  color: #39445a;
+  font-weight: 600;
+  font-size: 12px;
+}
+.image-field-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.image-field-preview {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 96px;
+  height: 96px;
+  overflow: hidden;
+  border: 1px solid #e2e6ec;
+  border-radius: 12px;
+  background: #f4f6f9;
+  color: #aab1bd;
+}
+.image-field-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.image-field-actions {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+.image-field-actions .button {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 12px;
+}
+.image-field-actions small {
+  color: #748394;
+  font-weight: 500;
+}
+.image-field-actions .image-field-error {
+  color: #ac493a;
+}

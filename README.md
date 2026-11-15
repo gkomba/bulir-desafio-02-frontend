@@ -15,7 +15,7 @@ cp .env.example .env     # ajuste API_URL se a API não estiver em localhost:300
 npm run dev              # http://localhost:3000 (se a API usar a 3000, o Next passa para a 3001)
 ```
 
-Outros comandos: `npm run build`, `npm start` e `npm run lint`.
+Outros comandos: `npm run build`, `npm start`, `npm run lint` e `npm test` (testes do Node, sem dependências, para a lógica em `core/`).
 
 ## Como fala com a API
 
