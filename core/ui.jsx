@@ -1,3 +1,4 @@
+import Image from "next/image";
 import logoImage from "../assets/logo.png";
 
 const iconGlyphs = {
@@ -62,7 +63,7 @@ const iconCodepoints = {
 export function Brand({ small = false }) {
   return (
     <div className={`brand ${small ? "brand-small" : ""}`}>
-      <img className="brand-logo" src={logoImage.src} alt="Bulir" />
+      <Image className="brand-logo" src={logoImage} alt="Bulir" priority />
     </div>
   );
 }
