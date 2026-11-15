@@ -31,6 +31,23 @@ const publish = async (provider: Session, prefix: string, priceKz: number): Prom
 };
 
 test.describe("contratação, carteira e histórico", () => {
+  test("no telemóvel o histórico mostra o serviço, o cliente, o prestador e o valor", async ({ client, provider }) => {
+    const { page } = client;
+    const title = await publish(provider, "Jardinagem", 3000);
+    await page.goto("/app");
+    await addFunds(page, 10000);
+    await hire(page, title);
+
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.getByRole("button", { name: /Histórico/ }).last().click();
+    const card = page.locator("tbody tr").filter({ hasText: title });
+    await expect(card).toBeVisible();
+    await expect(card.locator('td[data-label="Cliente"]')).toHaveText(client.account.name);
+    await expect(card.locator('td[data-label="Prestador"]')).toHaveText(provider.account.name);
+    await expect(card.locator('td[data-label="Valor"]')).toContainText("3000,00");
+    await page.setViewportSize({ width: 1280, height: 720 });
+  });
+
   test("sem cartão guardado não se carrega saldo: pede-se um cartão em Definições", async ({ page, request }) => {
     const account = newAccount("CLIENT");
     await register(request, account);

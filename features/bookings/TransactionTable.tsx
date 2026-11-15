@@ -47,19 +47,19 @@ export function TransactionTable({
         <tbody>
           {rows.map((transaction) => (
             <tr key={transaction.id}>
-              <td>
+              <td className="tx-service">
                 <Icon name="arrow_outward" className="table-service-icon" />
                 <b>{transaction.serviceTitle}</b>
               </td>
-              <td>{transaction.clientName}</td>
-              <td>{transaction.providerName}</td>
-              <td>{dateTime(transaction.scheduledAt)}</td>
-              <td>
+              <td data-label="Cliente">{transaction.clientName}</td>
+              <td data-label="Prestador">{transaction.providerName}</td>
+              <td data-label="Marcada para">{dateTime(transaction.scheduledAt)}</td>
+              <td data-label="Estado">
                 <span className={`status-pill is-${transaction.status.toLowerCase()}`}>
                   <i /> {statusLabel(transaction.status)}
                 </span>
               </td>
-              <td className="align-right">
+              <td className="align-right" data-label="Valor">
                 <b>{money(transaction.amount)}</b>
               </td>
               {act && (
