@@ -27,10 +27,6 @@ import {
 } from "../../core/services";
 import { toService, toTransaction, toUser } from "../../core/adapters";
 import { categories, money } from "../../core/format";
-import {
-  playNotificationSound,
-  unlockNotificationSound,
-} from "../../core/notification-sound";
 import { Brand, Icon } from "../../core/ui";
 import Auth from "../auth/Auth";
 import ServiceForm from "./ServiceForm";
@@ -54,10 +50,6 @@ function App() {
       ? "en"
       : "pt",
   );
-  const [preferences, setPreferences] = useState({
-    notifications: true,
-    confirmHire: true,
-  });
   const [cards, setCards] = useState([]);
   const [user, setUser] = useState(null);
   const initialized = useSyncExternalStore(
@@ -70,9 +62,6 @@ function App() {
   const [page, setPage] = useState("home");
   const [services, setServices] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notificationsBusy, setNotificationsBusy] = useState(false);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("relevance");
   const [category, setCategory] = useState("Todos");
@@ -97,44 +86,6 @@ function App() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const userId = user?.id;
-  const notificationPanelRef = useRef(null);
-  const notificationIdsRef = useRef({ userId: null, ids: new Set() });
-  const notificationSoundEnabledRef = useRef(preferences.notifications);
-  const walletActionInProgressRef = useRef(false);
-
-  useEffect(() => {
-    notificationSoundEnabledRef.current = preferences.notifications;
-  }, [preferences.notifications]);
-
-  const refreshNotifications = useCallback(async (force = false) => {
-    if (!userId || (walletActionInProgressRef.current && !force)) return false;
-    try {
-      const latest = await api("/notifications");
-      const known = notificationIdsRef.current;
-      setNotifications(latest);
-      if (known.userId !== userId) {
-        notificationIdsRef.current = {
-          userId,
-          ids: new Set(latest.map((item) => item.id)),
-        };
-        return false;
-      }
-
-      const incoming = latest.filter(
-        (item) => !item.read && !known.ids.has(item.id),
-      );
-      latest.forEach((item) => known.ids.add(item.id));
-      if (incoming.length && notificationSoundEnabledRef.current) {
-        playNotificationSound();
-        setToast(incoming[0].title);
-      }
-      return incoming.length > 0 && notificationSoundEnabledRef.current;
-    } catch {
-      // Keep the last loaded notification state if the API is temporarily offline.
-      return false;
-    }
-  }, [userId]);
-
   const load = useCallback(async (currentUser) => {
     if (!currentUser) return;
     const [nextServices, nextBookings] = await Promise.all([
@@ -154,11 +105,6 @@ function App() {
       const saved = JSON.parse(
         window.localStorage.getItem(`presta-ja.settings.${account.id}`) || "{}",
       );
-      setPreferences({
-        notifications: true,
-        confirmHire: true,
-        ...saved.preferences,
-      });
       setCards(Array.isArray(saved.cards) ? saved.cards : []);
     } catch {
       /* ignore invalid local preferences */
@@ -181,36 +127,8 @@ function App() {
       .finally(() => setBooting(false));
   }, [load]);
   useEffect(() => {
-    const unlock = () => unlockNotificationSound();
-    window.addEventListener("pointerdown", unlock, { once: true });
-    window.addEventListener("keydown", unlock, { once: true });
-    return () => {
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("keydown", unlock);
-    };
-  }, []);
-  useEffect(() => {
-    if (!userId) {
-      notificationIdsRef.current = { userId: null, ids: new Set() };
-      return undefined;
-    }
-
-    const initialPoll = window.setTimeout(() => refreshNotifications(), 0);
-    const poll = () => {
-      if (document.visibilityState !== "hidden") refreshNotifications();
-    };
-    const interval = window.setInterval(poll, 15000);
-    document.addEventListener("visibilitychange", poll);
-    return () => {
-      window.clearTimeout(initialPoll);
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", poll);
-    };
-  }, [refreshNotifications, userId]);
-  useEffect(() => {
     const logout = () => {
       setUser(null);
-      setNotifications([]);
       setBooting(false);
     };
     window.addEventListener(UNAUTHORIZED_EVENT, logout);
@@ -246,23 +164,6 @@ function App() {
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [hireCandidate]);
   useEffect(() => {
-    if (!notificationsOpen) return undefined;
-    const closeOnOutsideClick = (event) => {
-      if (!notificationPanelRef.current?.contains(event.target)) {
-        setNotificationsOpen(false);
-      }
-    };
-    const closeOnEscape = (event) => {
-      if (event.key === "Escape") setNotificationsOpen(false);
-    };
-    document.addEventListener("pointerdown", closeOnOutsideClick);
-    window.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("pointerdown", closeOnOutsideClick);
-      window.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [notificationsOpen]);
-  useEffect(() => {
     delete document.documentElement.dataset.theme;
     localStorage.removeItem("presta-ja.theme");
   }, []);
@@ -274,16 +175,10 @@ function App() {
     if (!userId) return;
     localStorage.setItem(
       `presta-ja.settings.${userId}`,
-      JSON.stringify({ preferences, cards }),
+      JSON.stringify({ cards }),
     );
-  }, [userId, preferences, cards]);
+  }, [userId, cards]);
   const isClient = user?.role === "CLIENT";
-  const unreadNotifications = notifications.filter(
-    (notification) => !notification.read,
-  ).length;
-  const notificationBadgeCount = preferences.notifications
-    ? unreadNotifications
-    : 0;
   const mine = useMemo(
     () =>
       transactions.filter((tx) =>
@@ -344,24 +239,10 @@ function App() {
     setBusy(false);
     return true;
   };
-  const markAllNotificationsRead = async () => {
-    setNotificationsBusy(true);
-    try {
-      await api("/notifications/read", { method: "POST" });
-      setNotifications((current) =>
-        current.map((notification) => ({ ...notification, read: true })),
-      );
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setNotificationsBusy(false);
-    }
-  };
   const logout = () => {
     // A API revoga a sessão e limpa os cookies. Se falhar, sai-se na mesma deste lado.
     api("/auth/logout", { method: "POST" }).catch(() => {});
     setUser(null);
-    setNotifications([]);
     setPage("home");
     setConfirmLogout(false);
   };
@@ -380,7 +261,6 @@ function App() {
         notice={bootError}
         onLogin={(next) => {
           restoreSettings(next);
-          setNotifications([]);
           setUser(next);
           setPage("home");
           load(next).catch((e) => setError(e.message));
@@ -480,7 +360,6 @@ function App() {
       );
     if (walletAttempt.current?.amount !== amount)
       walletAttempt.current = { amount, key: newIdempotencyKey() };
-    walletActionInProgressRef.current = true;
     let refused = false;
     const succeeded = await action(async () => {
       try {
@@ -494,14 +373,12 @@ function App() {
       }
       element.reset();
     }, "Saldo adicionado.");
-    walletActionInProgressRef.current = false;
     if (succeeded || refused) walletAttempt.current = null;
     if (succeeded) {
       // O pagamento já correu bem: se só a recarga do saldo falhar, diz-se, sem parecer que falhou.
       await refreshUser().catch(() =>
         setError("Saldo adicionado, mas não foi possível atualizar o saldo. Recarregue a página."),
       );
-      if (notificationSoundEnabledRef.current) playNotificationSound();
     }
   };
   const startEditing = (service) => {
@@ -603,76 +480,6 @@ function App() {
             <b>{navItems.find(([key]) => key === page)?.[1] ?? "Início"}</b>
           </div>
           <div className="top-actions">
-            <div className="notification-anchor" ref={notificationPanelRef}>
-              <button
-                className="icon-button"
-                aria-label={`${language === "en" ? "Notifications" : "Notificações"}${notificationBadgeCount ? ` (${notificationBadgeCount})` : ""}`}
-                aria-haspopup="dialog"
-                aria-expanded={notificationsOpen}
-                onClick={() => setNotificationsOpen((open) => !open)}
-              >
-                <Icon name="notifications" className="top-notification-icon" />
-                {notificationBadgeCount > 0 && (
-                  <span className="notification-badge">
-                    {notificationBadgeCount > 9 ? "9+" : notificationBadgeCount}
-                  </span>
-                )}
-              </button>
-              {notificationsOpen && (
-                <section
-                  className="notification-panel"
-                  role="dialog"
-                  aria-label={language === "en" ? "Notifications" : "Notificações"}
-                >
-                  <header className="notification-panel-header">
-                    <div>
-                      <h2>{language === "en" ? "Notifications" : "Notificações"}</h2>
-                      <span>
-                        {language === "en"
-                          ? `${unreadNotifications} unread`
-                          : `${unreadNotifications} por ler`}
-                      </span>
-                    </div>
-                    <button
-                      className="notification-read-all"
-                      disabled={!unreadNotifications || notificationsBusy}
-                      onClick={markAllNotificationsRead}
-                    >
-                      {language === "en" ? "Mark all read" : "Marcar lidas"}
-                    </button>
-                  </header>
-                  <div className="notification-list">
-                    {notifications.length ? (
-                      notifications.slice(0, 12).map((notification) => (
-                        <article
-                          className={`notification-item ${notification.read ? "" : "unread"}`}
-                          key={notification.id}
-                        >
-                          <span className="notification-item-icon">
-                            <Icon name="notifications" />
-                          </span>
-                          <div>
-                            <h3>{notification.title}</h3>
-                            <p>{notification.body}</p>
-                            <time dateTime={notification.createdAt}>
-                              {new Date(notification.createdAt).toLocaleString(
-                                language === "en" ? "en-GB" : "pt-PT",
-                                { dateStyle: "short", timeStyle: "short" },
-                              )}
-                            </time>
-                          </div>
-                          {!notification.read && <i aria-label="Por ler" />}
-                        </article>
-                      ))
-                    ) : (
-                      <p className="notifications-empty">
-                        {language === "en" ? "No notifications yet." : "Ainda não tem notificações."}
-                      </p>
-                    )}
-                  </div>
-                </section>
-              )}
-            </div>
             <span className="top-divider" />
             <button className="top-user" onClick={() => setPage("profile")}>
               <span className="avatar avatar-small">{user.name[0]}</span>
@@ -1138,7 +945,6 @@ function App() {
                   </span>
                   <h2>{user.name}</h2>
                   <p>{user.email}</p>
-                  {user.phone && <p>{user.phone}</p>}
                 </div>
                 <div className="profile-balance">
                   <small>Saldo atual</small>
@@ -1171,11 +977,8 @@ function App() {
           {page === "settings" && (
             <SettingsPage
               user={user}
-              onUserUpdate={setUser}
               language={language}
               setLanguage={setLanguage}
-              preferences={preferences}
-              setPreferences={setPreferences}
               cards={cards}
               setCards={setCards}
               onLogout={requestLogout}
