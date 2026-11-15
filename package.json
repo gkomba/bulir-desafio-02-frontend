@@ -2,12 +2,14 @@
   "name": "bulir-desafio-02-frontend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Desafio 2 (Bulir): aplicação web da plataforma de contratação de prestadores de serviços",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "node --test"
   },
   "engines": {
     "node": ">=22"
