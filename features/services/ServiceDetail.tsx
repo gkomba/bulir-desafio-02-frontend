@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Icon } from "../../components/Icon";
+import { useDialogFocus } from "../../components/useDialogFocus";
 import { money } from "../../lib/format";
 import type { Service } from "../../types/domain";
 import { useApp } from "../dashboard/AppContext";
@@ -18,6 +19,7 @@ export function ServiceDetail({
 }) {
   const { user } = useApp();
   const [hiring, setHiring] = useState(false);
+  const dialog = useDialogFocus<HTMLElement>();
 
   // Escape fecha o detalhe (a menos que a contratação esteja aberta: essa fecha-se a si própria).
   useEffect(() => {
@@ -37,7 +39,13 @@ export function ServiceDetail({
           if (event.target === event.currentTarget) onClose();
         }}
       >
-        <article className="service-modal">
+        <article
+          ref={dialog}
+          className="service-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label={service.title}
+        >
           <button className="modal-close" aria-label="Fechar" onClick={onClose}>
             <Icon name="close" />
           </button>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../components/Icon";
+import { useDialogFocus } from "../../components/useDialogFocus";
 import { errorMessage } from "../../lib/api";
 import {
   defaultSchedule,
@@ -30,14 +31,20 @@ export function HireModal({ service, onClose, onHired }: HireModalProps) {
   // A Idempotency-Key da tentativa. A API só a grava quando a reserva é criada: uma recusa (sem
   // saldo, data inválida) não deixa nada guardado, e repetir com a mesma chave é seguro.
   const key = useRef(newIdempotencyKey());
+  const dialog = useDialogFocus<HTMLElement>();
+
+  // Com o pedido em curso não se fecha: a contratação concluía-se com o ecrã já fechado.
+  const close = () => {
+    if (!busy) onClose();
+  };
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape" && !busy) onClose();
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
+  }, [busy, onClose]);
 
   const insufficient = user.balance < service.price;
 
@@ -70,10 +77,11 @@ export function HireModal({ service, onClose, onHired }: HireModalProps) {
     <div
       className="modal-backdrop hire-confirm-backdrop"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) close();
       }}
     >
       <section
+        ref={dialog}
         className="hire-confirm-modal"
         role="dialog"
         aria-modal="true"
@@ -126,7 +134,7 @@ export function HireModal({ service, onClose, onHired }: HireModalProps) {
             type="button"
             className="button button-outline"
             disabled={busy}
-            onClick={onClose}
+            onClick={close}
           >
             Cancelar
           </button>

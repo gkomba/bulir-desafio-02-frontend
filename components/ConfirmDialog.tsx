@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { Icon, type IconName } from "./Icon";
+import { useDialogFocus } from "./useDialogFocus";
 
 interface ConfirmDialogProps {
   title: string;
@@ -23,6 +24,8 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const dialog = useDialogFocus<HTMLElement>();
+
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") onCancel();
@@ -39,6 +42,7 @@ export function ConfirmDialog({
       }}
     >
       <section
+        ref={dialog}
         className="logout-modal"
         role="dialog"
         aria-modal="true"
