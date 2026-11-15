@@ -59,7 +59,9 @@ export function ExplorePage() {
   }, [services, category, search, sort]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged = filtered.slice((pageNumber - 1) * PAGE_SIZE, pageNumber * PAGE_SIZE);
+  // Se a lista encolher (por exemplo, depois de recarregar), a página não pode ficar além do fim.
+  const currentPage = Math.min(pageNumber, Math.max(1, totalPages));
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <>
@@ -126,7 +128,7 @@ export function ExplorePage() {
       <Pagination
         totalItems={filtered.length}
         pageSize={PAGE_SIZE}
-        currentPage={pageNumber}
+        currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setPageNumber}
       />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { allPages, errorMessage } from "../../lib/api";
 import { toService, toTransaction } from "../../lib/adapters";
 import type {
@@ -36,16 +36,22 @@ const fetchData = async (user: Pick<User, "id" | "role">): Promise<DashboardData
 export function useDashboardData(user: User, onError: (message: string) => void) {
   const [data, setData] = useState<DashboardData>({ services: [], transactions: [] });
   const { id, role } = user;
+  // Só vale a resposta do pedido mais recente: com dois recarregamentos seguidos, a lista antiga
+  // não pode chegar depois e sobrepor-se à nova.
+  const latest = useRef(0);
 
   const reload = useCallback(async () => {
-    setData(await fetchData({ id, role }));
+    const request = ++latest.current;
+    const next = await fetchData({ id, role });
+    if (request === latest.current) setData(next);
   }, [id, role]);
 
   useEffect(() => {
     let active = true;
+    const request = ++latest.current;
     fetchData({ id, role })
       .then((next) => {
-        if (active) setData(next);
+        if (active && request === latest.current) setData(next);
       })
       .catch((error: unknown) => {
         if (active) onError(errorMessage(error));
