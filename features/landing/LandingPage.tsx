@@ -171,7 +171,7 @@ export function LandingPage({ audience = "client" }: { audience?: Audience }) {
 
       <section className="landing-cta landing-container"><div className="landing-cta-panel"><div><span className="landing-eyebrow">BULIR</span><h2>{current.calloutTitle}</h2><p>{current.calloutCopy}</p></div><Link className="landing-button landing-button-dark" href={signupHref}>{isClient ? "Criar conta de cliente" : "Criar conta de prestador"}<Icon name="arrow_forward" /></Link><span className="landing-cta-orb" /></div></section>
 
-      <footer className="landing-footer"><div className="landing-container landing-footer-inner"><Link href="/" aria-label="Bulir"><Brand small /></Link><span>Serviços locais, ligações que fazem sentido.</span><div><Link href="/cliente">Cliente</Link><Link href="/prestador">Prestador</Link><Link href="/app">Entrar</Link></div><small>© {new Date().getFullYear()} Bulir</small></div></footer>
+      <footer className="landing-footer"><div className="landing-container landing-footer-inner"><Link href="/" aria-label="Bulir"><Brand small priority={false} /></Link><span>Serviços locais, ligações que fazem sentido.</span><div><Link href="/cliente">Cliente</Link><Link href="/prestador">Prestador</Link><Link href="/app">Entrar</Link></div><small>© {new Date().getFullYear()} Bulir</small></div></footer>
     </main>
   );
 }

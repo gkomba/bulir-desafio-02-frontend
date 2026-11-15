@@ -1,6 +1,18 @@
 # Bulir: aplicação web (Desafio 2)
 
-Aplicação web da plataforma de contratação de prestadores de serviços, em Next.js (App Router) e React. Consome a API do desafio 1.
+Aplicação web da plataforma de contratação de prestadores de serviços, em Next.js (App Router), React e TypeScript. Consome a API do desafio 1.
+
+## Funcionalidades
+
+| Enunciado | Onde está |
+| --- | --- |
+| Login com e-mail ou NIF e palavra-passe | `features/auth` |
+| Prestador: criar, listar, editar e excluir serviços (título, descrição, preço, imagem) | `features/services` (`MyServicesPage`, `ServiceForm`) |
+| Cliente: ver todos os serviços e contratá-los, com verificação de saldo | `features/services` (`ExplorePage`) e `features/bookings` (`HireModal`) |
+| Saldo do cliente e do prestador atualizado ao contratar | `features/wallet` e `features/bookings` |
+| Histórico de transações: serviço, prestador, cliente e valor | `features/bookings` (`HistoryPage`) |
+
+A sessão vive em cookies `httpOnly` que a API põe: o JavaScript nunca lê o token (o enunciado permite guardá-lo no estado ou no `localStorage`, e isto é mais seguro).
 
 ## Requisitos
 
@@ -12,10 +24,16 @@ Aplicação web da plataforma de contratação de prestadores de serviços, em N
 ```bash
 npm install
 cp .env.example .env     # ajuste API_URL se a API não estiver em localhost:3000
-npm run dev              # http://localhost:3000 (se a API usar a 3000, o Next passa para a 3001)
+npm run dev              # http://localhost:3000 (se a API usar a 3000, use: npx next dev -p 3150)
 ```
 
-Outros comandos: `npm run build`, `npm start`, `npm run lint` e `npm test` (testes do Node, sem dependências, para a lógica em `core/`).
+| Comando | O que faz |
+| --- | --- |
+| `npm run build` e `npm start` | Compila e serve a versão de produção |
+| `npm run typecheck` | Verifica os tipos (TypeScript estrito) |
+| `npm run lint` | ESLint |
+| `npm test` | Testes unitários (`node:test`, sem dependências, em TypeScript) |
+| `npm run test:e2e` | Testes de interface (Playwright), contra a aplicação e a API a correr |
 
 ## Como fala com a API
 
@@ -29,7 +47,22 @@ O navegador só fala com este site. O Next reencaminha os pedidos a `/v1/*` para
 
 | Pasta | Conteúdo |
 | --- | --- |
-| `app/` | Rotas (App Router): landing, `/cliente`, `/prestador` e `/app` (o painel) |
-| `modules/` | Ecrãs por funcionalidade: `auth`, `dashboard`, `landing`, `settings` |
-| `core/` | Peças partilhadas: pedidos à API, componentes de base, formatação e estilos |
-| `assets/` | Imagens |
+| `app/` | Rotas (App Router): landing, `/cliente`, `/prestador` e `/app` (a aplicação) |
+| `features/` | Uma pasta por funcionalidade: `auth`, `services`, `bookings`, `wallet`, `account`, `landing`, `session` e `dashboard` (o menu, o cabeçalho e o que as páginas partilham) |
+| `components/` | Peças de interface partilhadas (`Icon`, `Brand`, `FilterSelect`, `Pagination`, `ConfirmDialog`...) |
+| `lib/` | Lógica sem React: pedidos à API, conversão de dados, imagens, formatação (com testes ao lado) |
+| `types/` | Os tipos do domínio e da API |
+| `styles/` | Estilos globais e a fonte de ícones |
+| `tests/e2e/` | Testes de interface (Playwright) |
+
+## Alojamento
+
+Está alojada na Vercel (https://bulir-frontend.vercel.app), a falar com a API alojada na Render. A única configuração é a variável `API_URL` (o endereço da API, sem `/v1`). O Next reencaminha `/v1/*` para ela, por isso a sessão por cookies funciona sem CORS.
+
+Atrás de dois proxies (a Vercel e a Render), a API tem de ter `TRUST_PROXY=2` para o limite de pedidos contar cada pessoa e não a Vercel inteira.
+
+## Testes de interface
+
+`npm run test:e2e` arranca o Next (porta 3150) e corre os testes em Chromium contra a API em `API_URL`. Cada execução cria as suas contas (`e2e-...@teste.dev`) e os seus serviços, e nunca usa contas fixas. A API limita os logins a 5 por minuto, por isso a suite espera por uma vaga quando precisa. O envio de imagens ao Cloudinary é simulado nos testes, para não deixar ficheiros em conta nenhuma.
+
+Os testes deixam as contas de teste na base de dados da API: numa base local, apaga-se com `docker compose down -v` no repositório do backend.
