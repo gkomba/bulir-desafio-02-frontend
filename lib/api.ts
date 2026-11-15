@@ -121,6 +121,10 @@ export const api = async <T = unknown>(
   return (response.status === 204 ? null : await response.json()) as T;
 };
 
+/** A mensagem de um erro qualquer, para mostrar a quem usa a aplicação. */
+export const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : "Não foi possível concluir a operação.";
+
 export const json = (method: string, body: unknown): RequestInit => ({
   method,
   body: JSON.stringify(body),
