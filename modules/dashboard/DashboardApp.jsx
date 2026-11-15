@@ -9,6 +9,13 @@ import React, {
   useSyncExternalStore,
 } from "react";
 import { allPages, api, json, UNAUTHORIZED_EVENT } from "../../core/api";
+import { uploadImage } from "../../core/images";
+import {
+  createService,
+  imageAuthorization,
+  removeService,
+  updateService,
+} from "../../core/services";
 import { toService, toTransaction, toUser } from "../../core/adapters";
 import { categories, money } from "../../core/format";
 import {
@@ -17,6 +24,7 @@ import {
 } from "../../core/notification-sound";
 import { Brand, Icon } from "../../core/ui";
 import Auth from "../auth/Auth";
+import ServiceForm from "./ServiceForm";
 import SettingsPage from "../settings/SettingsPage";
 import {
   Empty,
@@ -59,7 +67,12 @@ function App() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("relevance");
   const [category, setCategory] = useState("Todos");
-  const [newServiceCategory, setNewServiceCategory] = useState(categories[1]);
+  // Serviço em edição (null = a criar um novo) e a chave que reinicia o formulário.
+  const [editingService, setEditingService] = useState(null);
+  const [formKey, setFormKey] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  // A imagem já enviada: se guardar o serviço falhar, tentar de novo não a reenvia.
+  const uploadedImage = useRef(null);
   const [explorePage, setExplorePage] = useState(1);
   const [selected, setSelected] = useState(null);
   const [hireCandidate, setHireCandidate] = useState(null);
@@ -419,23 +432,45 @@ function App() {
       }
     }
   };
-  const createService = async (event) => {
-    event.preventDefault();
-    const element = event.currentTarget;
-    const form = new FormData(element);
-    await action(async () => {
-      await api(
-        "/services",
-        json("POST", {
-          title: form.get("title"),
-          description: form.get("description"),
-          price: Number(String(form.get("price")).replace(",", ".")),
-          category: form.get("category"),
-        }),
-      );
-      element.reset();
-      setNewServiceCategory(categories[1]);
-    }, "Serviço publicado.");
+  const startEditing = (service) => {
+    setEditingService(service);
+    setFormKey((key) => key + 1);
+  };
+  const stopEditing = () => {
+    setEditingService(null);
+    setFormKey((key) => key + 1);
+  };
+  // Cria ou atualiza o serviço. A imagem só sai do navegador agora: vai direta ao Cloudinary com a
+  // assinatura da API, e o endereço que ele devolve é o que se guarda no serviço.
+  const saveService = async (data, image) => {
+    const saved = await action(
+      async () => {
+        let imageUrl;
+        if (image.kind === "remove") imageUrl = null;
+        if (image.kind === "new") {
+          if (uploadedImage.current?.blob !== image.blob) {
+            setUploadProgress(0);
+            const auth = await imageAuthorization();
+            const url = await uploadImage(image.blob, auth, setUploadProgress);
+            uploadedImage.current = { blob: image.blob, url };
+          }
+          imageUrl = uploadedImage.current.url;
+        }
+        const payload = { ...data, imageUrl };
+        if (editingService) await updateService(editingService.id, payload);
+        else await createService(payload);
+      },
+      editingService ? "Serviço atualizado." : "Serviço publicado.",
+    );
+    setUploadProgress(null);
+    if (saved) {
+      uploadedImage.current = null;
+      stopEditing();
+    }
+  };
+  const deleteService = (service) => {
+    if (editingService?.id === service.id) stopEditing();
+    return action(() => removeService(service.id), "Serviço removido.");
   };
 
   return (
@@ -933,22 +968,24 @@ function App() {
                         service={service}
                         onClick={() => setSelected(service)}
                       />
-                      <button
-                        type="button"
-                        className="button button-danger button-wide delete-service"
-                        disabled={busy}
-                        onClick={() =>
-                          action(
-                            () =>
-                              api(`/services/${service.id}`, {
-                                method: "DELETE",
-                              }),
-                            "Serviço removido.",
-                          )
-                        }
-                      >
-                        Remover serviço
-                      </button>
+                      <div className="service-actions">
+                        <button
+                          type="button"
+                          className="button button-outline"
+                          disabled={busy}
+                          onClick={() => startEditing(service)}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="button button-danger delete-service"
+                          disabled={busy}
+                          onClick={() => deleteService(service)}
+                        >
+                          Remover
+                        </button>
+                      </div>
                     </article>
                   ))}
                   {!services.length && (
@@ -958,62 +995,14 @@ function App() {
                     />
                   )}
                 </div>
-                <form className="panel create-form" onSubmit={createService}>
-                  <span className="eyebrow">NOVO SERVIÇO</span>
-                  <h2>Publicar serviço</h2>
-                  <label>
-                    Título
-                    <input
-                      name="title"
-                      required
-                      minLength="3"
-                      maxLength="80"
-                      placeholder="Ex.: Canalização residencial"
-                    />
-                  </label>
-                  <div className="create-filter-field">
-                    <span>Categoria</span>
-                    <FilterSelect
-                      name="category"
-                      label="Categoria"
-                      value={newServiceCategory}
-                      onChange={setNewServiceCategory}
-                      options={categories.slice(1).map((item) => ({
-                        value: item,
-                        label: item,
-                      }))}
-                    />
-                  </div>
-                  <label>
-                    Descrição
-                    <textarea
-                      name="description"
-                      required
-                      minLength="10"
-                      maxLength="500"
-                      rows="4"
-                      placeholder="Descreva o serviço que oferece"
-                    />
-                  </label>
-                  <label>
-                    Preço em Kz
-                    <input
-                      name="price"
-                      type="number"
-                      required
-                      min="1"
-                      step="any"
-                      placeholder="Ex.: 8 000"
-                    />
-                  </label>
-                  <button
-                    className="button button-primary button-wide"
-                    disabled={busy}
-                  >
-                    Publicar serviço{" "}
-                    <Icon name="arrow_forward" className="button-icon" />
-                  </button>
-                </form>
+                <ServiceForm
+                  key={formKey}
+                  editing={editingService}
+                  busy={busy}
+                  progress={uploadProgress}
+                  onSubmit={saveService}
+                  onCancel={stopEditing}
+                />
               </div>
             </>
           )}
