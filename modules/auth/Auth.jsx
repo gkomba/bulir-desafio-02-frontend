@@ -1,56 +1,79 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { api, json, setToken } from "../../core/api";
+import { useState } from "react";
+import { api, json } from "../../core/api";
+import { toUser } from "../../core/adapters";
 import { Brand, Icon } from "../../core/ui";
 
-export default function Auth({ onLogin }) {
-  const [register, setRegister] = useState(false);
-  const [data, setData] = useState({
-    name: "",
-    email: "",
-    nif: "",
-    identifier: "",
-    password: "",
-    role: "CLIENT",
+// O ecrã só aparece no navegador (o painel mostra um ecrã de carregamento até lá), por isso
+// pode ler o endereço logo no estado inicial, sem efeitos.
+const urlParams = () =>
+  typeof window === "undefined"
+    ? new URLSearchParams()
+    : new URLSearchParams(window.location.search);
+
+export default function Auth({ onLogin, notice = "" }) {
+  const [register, setRegister] = useState(
+    () => urlParams().get("mode") === "register",
+  );
+  const [data, setData] = useState(() => {
+    const role = urlParams().get("role");
+    return {
+      name: "",
+      email: "",
+      nif: "",
+      identifier: "",
+      password: "",
+      role: role === "PROVIDER" ? "PROVIDER" : "CLIENT",
+    };
   });
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("mode") === "register") setRegister(true);
-    const role = params.get("role");
-    if (role === "CLIENT" || role === "PROVIDER") {
-      setData((current) => ({ ...current, role }));
-    }
-  }, []);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [slow, setSlow] = useState(false);
   const update = (key) => (event) =>
     setData((current) => ({ ...current, [key]: event.target.value }));
   const submit = async (event) => {
     event.preventDefault();
     setError("");
     setBusy(true);
+    // A API alojada pode estar a acordar: depois de uns segundos, explica a espera.
+    const slowTimer = setTimeout(() => setSlow(true), 6000);
+    let created = false;
     try {
-      const result = await api(
-        register ? "/auth/register" : "/auth/login",
-        json(
-          "POST",
-          register
-            ? {
-                name: data.name,
-                email: data.email,
-                nif: data.role === "PROVIDER" ? data.nif : undefined,
-                password: data.password,
-                role: data.role,
-              }
-            : { identifier: data.identifier, password: data.password },
-        ),
-      );
-      setToken(result.token);
-      onLogin(result.user);
+      const identifier = data.identifier.trim();
+      if (register) {
+        await api(
+          "/auth/register",
+          json("POST", {
+            fullName: data.name.trim(),
+            email: data.email.trim(),
+            nif: data.role === "PROVIDER" ? data.nif.trim() : undefined,
+            password: data.password,
+            role: data.role,
+          }),
+        );
+        created = true;
+      }
+      // Entra-se com o e-mail ou com o NIF (só os prestadores têm NIF).
+      const credentials = register
+        ? { email: data.email.trim(), password: data.password }
+        : identifier.includes("@")
+          ? { email: identifier, password: data.password }
+          : { nif: identifier, password: data.password };
+      const user = await api("/auth/login", json("POST", credentials));
+      onLogin(toUser(user));
     } catch (e) {
-      setError(e.message);
+      if (created) {
+        // O registo correu bem e só a entrada falhou: leva para a entrada, com o e-mail já escrito.
+        setRegister(false);
+        setData((current) => ({ ...current, identifier: current.email }));
+        setError(`Conta criada, mas não foi possível entrar: ${e.message}`);
+      } else {
+        setError(e.message);
+      }
     } finally {
+      clearTimeout(slowTimer);
+      setSlow(false);
       setBusy(false);
     }
   };
@@ -140,9 +163,10 @@ export default function Auth({ onLogin }) {
                     NIF
                     <input
                       required
-                      inputMode="numeric"
-                      maxLength="9"
-                      placeholder="9 dígitos"
+                      pattern="[A-Za-z0-9]{9,14}"
+                      title="Entre 9 e 14 letras ou números"
+                      maxLength="14"
+                      placeholder="9 a 14 letras ou números"
                       value={data.nif}
                       onChange={update("nif")}
                     />
@@ -167,14 +191,20 @@ export default function Auth({ onLogin }) {
               <input
                 required
                 type="password"
-                minLength={register ? 6 : undefined}
+                minLength={register ? 8 : undefined}
+                maxLength="72"
                 autoComplete={register ? "new-password" : "current-password"}
                 placeholder="A sua palavra-passe"
                 value={data.password}
                 onChange={update("password")}
               />
             </label>
-            {error && <p className="error-box">{error}</p>}
+            {slow && (
+              <p className="muted">
+                A ligar ao servidor… na primeira vez pode demorar até um minuto.
+              </p>
+            )}
+            {(error || notice) && <p className="error-box">{error || notice}</p>}
             <button
               className="button button-primary button-wide"
               disabled={busy}
