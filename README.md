@@ -61,6 +61,19 @@ Está alojada na Vercel (https://bulir-frontend.vercel.app), a falar com a API a
 
 Atrás de dois proxies (a Vercel e a Render), a API tem de ter `TRUST_PROXY=2` para o limite de pedidos contar cada pessoa e não a Vercel inteira.
 
+## Contas para experimentar
+
+Em https://bulir-frontend.vercel.app há quatro contas de demonstração, com serviços e saldo já criados. Todas usam a senha `Senha-Segura-123`.
+
+| Perfil | E-mail | O que tem |
+| --- | --- | --- |
+| Cliente | `ana@seed.bulir.dev` | Saldo de 50 000,00 Kz e três contratações (confirmada, cancelada e concluída) |
+| Cliente | `bruno@seed.bulir.dev` | Saldo de 2 000,00 Kz, sem contratações |
+| Prestador | `barbeiro@seed.bulir.dev` | Seis serviços (beleza, casa, educação e tecnologia) |
+| Prestador | `massagista@seed.bulir.dev` | Cinco serviços (saúde, automóvel, eventos, tecnologia e educação) |
+
+A API limita os logins a 5 por minuto: se aparecer um aviso de demasiados pedidos, espere um minuto. Para ver tudo de raiz, crie a sua conta em "Criar conta".
+
 ## Testes de interface
 
 `npm run test:e2e` arranca o Next (porta 3150) e corre os testes em Chromium contra a API em `API_URL`. Cada execução cria as suas contas (`e2e-...@teste.dev`) e os seus serviços, e nunca usa contas fixas. A API limita os logins a 5 por minuto, por isso a suite espera por uma vaga quando precisa. O envio de imagens ao Cloudinary é simulado nos testes, para não deixar ficheiros em conta nenhuma.
