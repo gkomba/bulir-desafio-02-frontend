@@ -1,0 +1,24 @@
+{
+  "name": "bulir-desafio-02-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desafio 2 (Bulir): aplicação web da plataforma de contratação de prestadores de serviços",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint ."
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.6"
+  }
+}
