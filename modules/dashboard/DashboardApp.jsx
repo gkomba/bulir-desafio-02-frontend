@@ -9,7 +9,16 @@ import React, {
   useSyncExternalStore,
 } from "react";
 import { allPages, api, json, UNAUTHORIZED_EVENT } from "../../core/api";
+import {
+  cancelBooking,
+  completeBooking,
+  defaultSchedule,
+  newIdempotencyKey,
+  placeBooking,
+  toLocalInput,
+} from "../../core/bookings";
 import { uploadImage } from "../../core/images";
+import { addBalance, MAX_PAYMENT_KWANZAS } from "../../core/payments";
 import {
   createService,
   imageAuthorization,
@@ -71,7 +80,13 @@ function App() {
   const [editingService, setEditingService] = useState(null);
   const [formKey, setFormKey] = useState(0);
   const [uploadProgress, setUploadProgress] = useState(null);
-  const [removeCandidate, setRemoveCandidate] = useState(null);
+  // Confirmação de uma ação destrutiva: { title, text, confirmLabel, run }.
+  const [confirmAction, setConfirmAction] = useState(null);
+  // Quando o serviço contratado deve ser prestado (campo de data e hora local).
+  const [hireWhen, setHireWhen] = useState("");
+  // A Idempotency-Key da tentativa de contratação, e a do carregamento de saldo em curso.
+  const hireKey = useRef(null);
+  const walletAttempt = useRef(null);
   // A imagem já enviada: se guardar o serviço falhar, tentar de novo não a reenvia.
   const uploadedImage = useRef(null);
   const [explorePage, setExplorePage] = useState(1);
@@ -215,13 +230,13 @@ function App() {
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [confirmLogout]);
   useEffect(() => {
-    if (!removeCandidate) return undefined;
+    if (!confirmAction) return undefined;
     const closeOnEscape = (event) => {
-      if (event.key === "Escape") setRemoveCandidate(null);
+      if (event.key === "Escape") setConfirmAction(null);
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [removeCandidate]);
+  }, [confirmAction]);
   useEffect(() => {
     if (!hireCandidate) return undefined;
     const closeOnEscape = (event) => {
@@ -303,7 +318,10 @@ function App() {
     (explorePage - 1) * explorePageSize,
     explorePage * explorePageSize,
   );
-  const total = mine.reduce((sum, tx) => sum + tx.amount, 0);
+  // Uma contratação cancelada devolve o valor ao cliente: não conta para o total.
+  const total = mine
+    .filter((tx) => tx.status !== "CANCELLED")
+    .reduce((sum, tx) => sum + tx.amount, 0);
 
   // Devolve true se a operação correu bem. Se só a recarga da lista falhar, a operação já foi
   // feita (e quem chamou deve tratá-la como feita: repetir criaria um serviço em duplicado).
@@ -404,48 +422,77 @@ function App() {
         ["settings", language === "en" ? "Settings" : "Definições", "settings"],
       ];
 
+  const refreshUser = async () => setUser(toUser(await api("/auth/me")));
   const completeHire = async (service) => {
+    const scheduled = new Date(hireWhen);
+    if (Number.isNaN(scheduled.getTime()) || scheduled <= new Date()) {
+      setError("Escolha uma data e uma hora no futuro.");
+      return;
+    }
     const succeeded = await action(async () => {
-      await api(`/services/${service.id}/hire`, json("POST", {}));
+      await placeBooking(service.id, scheduled, hireKey.current);
       setSelected(null);
       setHireCandidate(null);
     }, "Serviço contratado com sucesso.");
-    if (succeeded) setUser(toUser(await api("/auth/me")));
+    if (succeeded) await refreshUser().catch((e) => setError(e.message));
   };
+  // A contratação precisa sempre de uma data, por isso abre sempre o ecrã de confirmação.
   const hire = (service) => {
-    if (preferences.confirmHire) {
-      setError("");
-      setHireCandidate(service);
-      return;
-    }
-    void completeHire(service);
+    setError("");
+    hireKey.current = newIdempotencyKey();
+    setHireWhen(defaultSchedule());
+    setHireCandidate(service);
   };
+  // Cancelar (cliente) e concluir (prestador). Cancelar devolve o valor ao cliente.
+  const changeBooking = async (work, success) => {
+    const succeeded = await action(work, success);
+    if (succeeded) await refreshUser().catch((e) => setError(e.message));
+  };
+  const askCancel = (tx) =>
+    setConfirmAction({
+      title: "Cancelar a contratação?",
+      text: (
+        <>
+          O valor de <b>{money(tx.amount)}</b> de <b>{tx.serviceTitle}</b> volta
+          ao seu saldo.
+        </>
+      ),
+      confirmLabel: "Cancelar contratação",
+      run: () =>
+        changeBooking(() => cancelBooking(tx.id), "Contratação cancelada."),
+    });
+  const complete = (tx) =>
+    changeBooking(() => completeBooking(tx.id), "Serviço concluído.");
+  // Só o cliente carrega saldo (o prestador recebe-o ao ser contratado). A mesma Idempotency-Key
+  // vale enquanto o valor for o mesmo e o resultado for incerto (rede, servidor): repetir não
+  // carrega duas vezes. Uma recusa definitiva usa uma chave nova na tentativa seguinte.
   const wallet = async (event) => {
     event.preventDefault();
     const element = event.currentTarget;
     const form = new FormData(element);
     const amount = Number(String(form.get("amount")).replace(",", "."));
     if (!(amount > 0)) return setError("Introduza um valor maior que zero.");
-    walletActionInProgressRef.current = isClient;
-    const succeeded = await action(
-      async () => {
-        setUser(
-          await api(
-            isClient ? "/me/deposit" : "/me/withdraw",
-            json("POST", { amount }),
-          ),
-        );
-        element.reset();
-      },
-      isClient ? "Saldo adicionado." : "Levantamento concluído.",
-    );
-    walletActionInProgressRef.current = false;
-    if (isClient && succeeded) {
-      const notificationPlayed = await refreshNotifications(true);
-      if (!notificationPlayed && notificationSoundEnabledRef.current) {
-        playNotificationSound();
+    if (amount > MAX_PAYMENT_KWANZAS)
+      return setError(
+        `O valor máximo de cada carregamento é ${money(MAX_PAYMENT_KWANZAS)}.`,
+      );
+    if (walletAttempt.current?.amount !== amount)
+      walletAttempt.current = { amount, key: newIdempotencyKey() };
+    walletActionInProgressRef.current = true;
+    let refused = false;
+    const succeeded = await action(async () => {
+      try {
+        await addBalance(amount, walletAttempt.current.key);
+      } catch (e) {
+        refused = e.status >= 400 && e.status < 500 && e.status !== 408 && e.status !== 429;
+        throw e;
       }
-    }
+      await refreshUser();
+      element.reset();
+    }, "Saldo adicionado.");
+    walletActionInProgressRef.current = false;
+    if (succeeded || refused) walletAttempt.current = null;
+    if (succeeded && notificationSoundEnabledRef.current) playNotificationSound();
   };
   const startEditing = (service) => {
     setEditingService(service);
@@ -485,9 +532,25 @@ function App() {
     }
   };
   const deleteService = async (service) => {
-    setRemoveCandidate(null);
     if (editingService?.id === service.id) stopEditing();
     await action(() => removeService(service.id), "Serviço removido.");
+  };
+  const confirmRemove = (service) =>
+    setConfirmAction({
+      title: "Remover o serviço?",
+      text: (
+        <>
+          O serviço <b>{service.title}</b> deixa de aparecer aos clientes. Esta
+          ação não pode ser desfeita.
+        </>
+      ),
+      confirmLabel: "Remover",
+      run: () => deleteService(service),
+    });
+  const runConfirmed = async () => {
+    const { run } = confirmAction;
+    setConfirmAction(null);
+    await run();
   };
 
   return (
@@ -867,7 +930,7 @@ function App() {
                   <p>
                     {isClient
                       ? "Adicione saldo e pague pelos serviços com facilidade."
-                      : "Consulte os seus ganhos e solicite um levantamento."}
+                      : "Consulte os seus ganhos: os pagamentos dos clientes entram no seu saldo."}
                   </p>
                 </div>
               </div>
@@ -890,6 +953,7 @@ function App() {
                     </span>
                   </div>
                 </div>
+                {isClient ? (
                 <div className="panel wallet-form">
                   <div className="panel-title">
                     <Icon
@@ -915,6 +979,7 @@ function App() {
                         required
                         type="number"
                         min="1"
+                        max={MAX_PAYMENT_KWANZAS}
                         step="any"
                         placeholder="Ex.: 10 000"
                       />
@@ -946,6 +1011,21 @@ function App() {
                     </button>
                   </form>
                 </div>
+                ) : (
+                <div className="panel wallet-form">
+                  <div className="panel-title">
+                    <Icon name="verified_user" className="form-icon" />
+                    <div>
+                      <h2>Como recebe</h2>
+                      <p>
+                        Quando um cliente contrata um dos seus serviços, o valor
+                        entra diretamente no seu saldo. O levantamento ainda não
+                        está disponível.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                )}
               </div>
               <div className="section-heading section-heading-spaced">
                 <div>
@@ -965,7 +1045,12 @@ function App() {
                   <p>Consulte as suas contratações e vendas.</p>
                 </div>
               </div>
-              <TransactionTable rows={mine} isClient={isClient} />
+              <TransactionTable
+                rows={mine}
+                isClient={isClient}
+                onCancel={askCancel}
+                onComplete={complete}
+              />
             </>
           )}
           {page === "services" && (
@@ -1000,7 +1085,7 @@ function App() {
                           className="button button-danger delete-service"
                           disabled={busy}
                           aria-label={`Remover ${service.title}`}
-                          onClick={() => setRemoveCandidate(service)}
+                          onClick={() => confirmRemove(service)}
                         >
                           Remover
                         </button>
@@ -1177,6 +1262,19 @@ function App() {
                 <b>{money(Math.max(0, user.balance - hireCandidate.price))}</b>
               </div>
             </div>
+            <label className="hire-schedule">
+              <span>{language === "en" ? "When?" : "Quando?"}</span>
+              <input
+                type="datetime-local"
+                value={hireWhen}
+                min={toLocalInput(new Date())}
+                onChange={(event) => {
+                  setHireWhen(event.target.value);
+                  // Outra data é outro pedido: com a mesma chave, a API recusaria a repetição.
+                  hireKey.current = newIdempotencyKey();
+                }}
+              />
+            </label>
             {user.balance < hireCandidate.price && (
               <p className="hire-insufficient">
                 {language === "en"
@@ -1208,37 +1306,31 @@ function App() {
           </section>
         </div>
       )}
-      {removeCandidate && (
+      {confirmAction && (
         <div
           className="modal-backdrop logout-backdrop"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setRemoveCandidate(null);
+            if (event.target === event.currentTarget) setConfirmAction(null);
           }}
         >
           <section
             className="logout-modal"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="remove-title"
+            aria-labelledby="confirm-title"
           >
             <span className="logout-modal-icon"><Icon name="close" /></span>
-            <h2 id="remove-title">Remover o serviço?</h2>
-            <p>
-              O serviço <b>{removeCandidate.title}</b> deixa de aparecer aos
-              clientes. Esta ação não pode ser desfeita.
-            </p>
+            <h2 id="confirm-title">{confirmAction.title}</h2>
+            <p>{confirmAction.text}</p>
             <div className="logout-modal-actions">
               <button
                 className="button button-outline"
-                onClick={() => setRemoveCandidate(null)}
+                onClick={() => setConfirmAction(null)}
               >
                 Cancelar
               </button>
-              <button
-                className="button button-danger"
-                onClick={() => deleteService(removeCandidate)}
-              >
-                Remover
+              <button className="button button-danger" onClick={runConfirmed}>
+                {confirmAction.confirmLabel}
               </button>
             </div>
           </section>

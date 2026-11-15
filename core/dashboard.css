@@ -69,3 +69,49 @@
 .image-field-actions .image-field-error {
   color: #ac493a;
 }
+
+/* Data e hora da contratação */
+.hire-schedule {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0 4px;
+  color: #39445a;
+  font-weight: 600;
+  font-size: 12px;
+  text-align: left;
+}
+.hire-schedule input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid #e2e6ec;
+  border-radius: 9px;
+  background: #fff;
+  font: inherit;
+}
+.hire-schedule input:focus {
+  border-color: #2acbaa;
+  box-shadow: 0 0 0 3px rgba(50, 226, 194, 0.18);
+  outline: 0;
+}
+
+/* Estado das contratações e ação na tabela */
+.status-pill.is-confirmed {
+  background: #eaf1fb;
+  color: #2c5fa8;
+}
+.status-pill.is-confirmed i {
+  background: #4a86d6;
+}
+.status-pill.is-cancelled {
+  background: #fdeeee;
+  color: #b13a3a;
+}
+.status-pill.is-cancelled i {
+  background: #d94848;
+}
+.table-action {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 11px;
+}
