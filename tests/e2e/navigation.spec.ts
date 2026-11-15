@@ -117,17 +117,18 @@ test.describe("o que cada perfil vê", () => {
     const { page } = client;
     await openPage(page, "Definições");
     await page.getByLabel("Nome do titular").fill("Ana Cliente");
-    await page.getByLabel("Número do cartão").fill("4111 1111 1111 4242");
+    await page.getByLabel("Número do cartão").fill("5555 5555 5555 9876");
     await page.getByLabel("Validade (MM/AA)").fill("12/30");
     await page.getByRole("button", { name: "Adicionar cartão" }).click();
 
-    await expect(page.getByText("Visa •••• 4242")).toBeVisible();
-    await expect(page.locator(".default-card-label")).toHaveText("Predefinido");
+    // O cliente partilhado pode já ter outros cartões: este teste só olha para o seu
+    const row = page.locator(".saved-card-row").filter({ hasText: "Mastercard •••• 9876" });
+    await expect(row).toBeVisible();
     // Só se guardam a marca e os últimos 4 dígitos
     const stored = await page.evaluate(() => JSON.stringify({ ...window.localStorage }));
-    expect(stored).not.toContain("4111");
+    expect(stored).not.toContain("5555");
 
-    await page.getByRole("button", { name: "Remover" }).first().click();
-    await expect(page.getByText("Visa •••• 4242")).toHaveCount(0);
+    await row.getByRole("button", { name: "Remover" }).click();
+    await expect(page.getByText("Mastercard •••• 9876")).toHaveCount(0);
   });
 });
