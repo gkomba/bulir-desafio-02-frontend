@@ -220,7 +220,7 @@
   .landing-faq-list details p { font-size: 10px; }
 }
 
-/* Headspace inspired geometry and motion; keeps the existing Presta-ja palette and type. */
+/* Headspace inspired geometry and motion; keeps the existing Bulir palette and type. */
 .landing-header {
   border-bottom: 1px solid var(--line);
 }
