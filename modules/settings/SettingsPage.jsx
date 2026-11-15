@@ -1,30 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { api, json } from "../../core/api";
 import { Icon } from "../../core/ui";
 
 const copy = {
   pt: {
     eyebrow: "PREFERÊNCIAS DA CONTA",
     title: "Definições",
-    subtitle: "Gira a sua conta, segurança e preferências.",
-    account: "Conta e segurança",
+    subtitle: "Consulte a sua conta e escolha as preferências.",
+    account: "A sua conta",
     profile: "Dados pessoais",
+    readOnlyHint: "Os dados da conta não podem ser alterados nesta versão.",
+    role: "Perfil",
+    client: "Cliente",
+    provider: "Prestador",
     name: "Nome completo",
-    phone: "Telefone",
     email: "E-mail",
-    save: "Guardar alterações",
-    password: "Alterar palavra-passe",
-    current: "Palavra-passe atual",
-    next: "Nova palavra-passe",
-    confirm: "Confirmar palavra-passe",
-    savePassword: "Atualizar palavra-passe",
     preferences: "Preferências",
-    notifications: "Notificações",
-    notificationsHint: "Receber avisos sobre atividade da conta",
-    hireConfirm: "Confirmar antes de contratar",
-    hireHint: "Pedir confirmação antes de iniciar uma contratação",
     language: "Idioma",
     portuguese: "Português",
     english: "English",
@@ -34,7 +26,6 @@ const copy = {
     holder: "Nome do titular",
     number: "Número do cartão",
     expiry: "Validade (MM/AA)",
-    add: "Guardar cartão",
     default: "Predefinido",
     makeDefault: "Tornar predefinido",
     remove: "Remover",
@@ -49,31 +40,21 @@ const copy = {
     version: "Versão",
     session: "Sessão",
     logout: "Terminar sessão",
-    logoutConfirm: "Tem a certeza de que pretende terminar a sessão?",
     success: "Alterações guardadas.",
-    passwordSuccess: "Palavra-passe atualizada.",
-    passwordMismatch: "As palavras-passe não coincidem.",
   },
   en: {
     eyebrow: "ACCOUNT PREFERENCES",
     title: "Settings",
-    subtitle: "Manage your account, security, and preferences.",
-    account: "Account and security",
+    subtitle: "Review your account and choose your preferences.",
+    account: "Your account",
     profile: "Personal details",
+    readOnlyHint: "Account details cannot be changed in this version.",
+    role: "Profile",
+    client: "Client",
+    provider: "Provider",
     name: "Full name",
-    phone: "Phone",
     email: "Email",
-    save: "Save changes",
-    password: "Change password",
-    current: "Current password",
-    next: "New password",
-    confirm: "Confirm password",
-    savePassword: "Update password",
     preferences: "Preferences",
-    notifications: "Notifications",
-    notificationsHint: "Receive account activity updates",
-    hireConfirm: "Confirm before hiring",
-    hireHint: "Ask before starting a service booking",
     language: "Language",
     portuguese: "Português",
     english: "English",
@@ -83,7 +64,6 @@ const copy = {
     holder: "Cardholder name",
     number: "Card number",
     expiry: "Expiry (MM/YY)",
-    add: "Save card",
     default: "Default",
     makeDefault: "Make default",
     remove: "Remove",
@@ -97,10 +77,7 @@ const copy = {
     version: "Version",
     session: "Session",
     logout: "Sign out",
-    logoutConfirm: "Are you sure you want to sign out?",
     success: "Changes saved.",
-    passwordSuccess: "Password updated.",
-    passwordMismatch: "Passwords do not match.",
   },
 };
 
@@ -113,26 +90,10 @@ function Group({ title, children }) {
   );
 }
 
-function Toggle({ checked, onChange, label }) {
-  return (
-    <label className="settings-switch" aria-label={label}>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-      />
-      <span />
-    </label>
-  );
-}
-
 export default function SettingsPage({
   user,
-  onUserUpdate,
   language,
   setLanguage,
-  preferences,
-  setPreferences,
   cards,
   setCards,
   onLogout,
@@ -140,55 +101,7 @@ export default function SettingsPage({
   onError,
 }) {
   const t = copy[language] ?? copy.pt;
-  const [name, setName] = useState(user.name ?? "");
-  const [phone, setPhone] = useState(user.phone ?? "");
-  const [password, setPassword] = useState({
-    current: "",
-    next: "",
-    confirm: "",
-  });
   const [card, setCard] = useState({ holder: "", number: "", expiry: "" });
-  const [busy, setBusy] = useState(false);
-
-  const saveProfile = async (event) => {
-    event.preventDefault();
-    setBusy(true);
-    onError("");
-    try {
-      const updated = await api(
-        "/me",
-        json("PUT", { name: name.trim(), phone: phone.trim() }),
-      );
-      onUserUpdate(updated);
-      onToast(t.success);
-    } catch (error) {
-      onError(error.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const savePassword = async (event) => {
-    event.preventDefault();
-    onError("");
-    if (password.next !== password.confirm) return onError(t.passwordMismatch);
-    setBusy(true);
-    try {
-      await api(
-        "/me/password",
-        json("POST", {
-          currentPassword: password.current,
-          newPassword: password.next,
-        }),
-      );
-      setPassword({ current: "", next: "", confirm: "" });
-      onToast(t.passwordSuccess);
-    } catch (error) {
-      onError(error.message);
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const addCard = (event) => {
     event.preventDefault();
@@ -226,125 +139,33 @@ export default function SettingsPage({
             </span>
             <div>
               <h3>{t.profile}</h3>
-              <p>
-                {t.email}: {user.email}
-              </p>
+              <p>{t.readOnlyHint}</p>
             </div>
           </div>
-          <form
-            className="settings-form settings-form-inline"
-            onSubmit={saveProfile}
-          >
-            <label>
-              {t.name}
-              <input
-                required
-                minLength="3"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </label>
-            <label>
-              {t.phone}
-              <input
-                type="tel"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-              />
-            </label>
-            <button className="button button-primary" disabled={busy}>
-              {t.save}
-            </button>
-          </form>
-        </div>
-        <div className="settings-block">
-          <div className="settings-block-heading">
-            <span className="settings-icon">
-              <Icon name="lock" />
-            </span>
+          <dl className="settings-details">
             <div>
-              <h3>{t.password}</h3>
-              <p>{t.current} ·••••••••</p>
+              <dt>{t.name}</dt>
+              <dd>{user.name}</dd>
             </div>
-          </div>
-          <form
-            className="settings-form settings-form-inline"
-            onSubmit={savePassword}
-          >
-            <label>
-              {t.current}
-              <input
-                required
-                type="password"
-                autoComplete="current-password"
-                value={password.current}
-                onChange={(event) =>
-                  setPassword({ ...password, current: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              {t.next}
-              <input
-                required
-                minLength="6"
-                type="password"
-                autoComplete="new-password"
-                value={password.next}
-                onChange={(event) =>
-                  setPassword({ ...password, next: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              {t.confirm}
-              <input
-                required
-                minLength="6"
-                type="password"
-                autoComplete="new-password"
-                value={password.confirm}
-                onChange={(event) =>
-                  setPassword({ ...password, confirm: event.target.value })
-                }
-              />
-            </label>
-            <button className="button button-primary" disabled={busy}>
-              {t.savePassword}
-            </button>
-          </form>
+            <div>
+              <dt>{t.email}</dt>
+              <dd>{user.email}</dd>
+            </div>
+            {user.nif && (
+              <div>
+                <dt>NIF</dt>
+                <dd>{user.nif}</dd>
+              </div>
+            )}
+            <div>
+              <dt>{t.role}</dt>
+              <dd>{user.role === "CLIENT" ? t.client : t.provider}</dd>
+            </div>
+          </dl>
         </div>
       </Group>
 
       <Group title={t.preferences}>
-        <div className="settings-row">
-          <div>
-            <b>{t.notifications}</b>
-            <small>{t.notificationsHint}</small>
-          </div>
-          <Toggle
-            label={t.notifications}
-            checked={preferences.notifications}
-            onChange={(value) =>
-              setPreferences({ ...preferences, notifications: value })
-            }
-          />
-        </div>
-        {user.role === "CLIENT" && (
-          <div className="settings-row">
-            <div>
-              <b>{t.hireConfirm}</b>
-              <small>{t.hireHint}</small>
-            </div>
-            <Toggle
-              label={t.hireConfirm}
-              checked={preferences.confirmHire}
-              onChange={(value) =>
-                setPreferences({ ...preferences, confirmHire: value })
-              }
-            />
-          </div>
-        )}
         <div className="settings-row">
           <div>
             <b>{t.language}</b>
