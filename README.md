@@ -55,6 +55,12 @@ O navegador só fala com este site. O Next reencaminha os pedidos a `/v1/*` para
 | `styles/` | Estilos globais e a fonte de ícones |
 | `tests/e2e/` | Testes de interface (Playwright) |
 
+## Alojamento
+
+Está alojada na Vercel (https://bulir-frontend.vercel.app), a falar com a API alojada na Render. A única configuração é a variável `API_URL` (o endereço da API, sem `/v1`). O Next reencaminha `/v1/*` para ela, por isso a sessão por cookies funciona sem CORS.
+
+Atrás de dois proxies (a Vercel e a Render), a API tem de ter `TRUST_PROXY=2` para o limite de pedidos contar cada pessoa e não a Vercel inteira.
+
 ## Testes de interface
 
 `npm run test:e2e` arranca o Next (porta 3150) e corre os testes em Chromium contra a API em `API_URL`. Cada execução cria as suas contas (`e2e-...@teste.dev`) e os seus serviços, e nunca usa contas fixas. A API limita os logins a 5 por minuto, por isso a suite espera por uma vaga quando precisa. O envio de imagens ao Cloudinary é simulado nos testes, para não deixar ficheiros em conta nenhuma.
