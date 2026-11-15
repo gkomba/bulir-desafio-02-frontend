@@ -1,0 +1,127 @@
+:root {
+  --motion-fast: 120ms;
+  --motion-state: 200ms;
+  --motion-enter: 240ms;
+  --motion-ease: cubic-bezier(0, 0, 0.2, 1);
+  --motion-change: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.button {
+  transition:
+    background-color var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    color var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease),
+    transform var(--motion-fast) var(--motion-ease);
+}
+.button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.icon-button,
+.nav-item,
+.sidebar-logout,
+.mobile-nav button,
+.text-link,
+.settings-choice button,
+.settings-text-button,
+.settings-remove,
+.category-row button,
+.pagination-page,
+.pagination-arrow {
+  transition:
+    background-color var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    color var(--motion-fast) var(--motion-ease),
+    transform var(--motion-fast) var(--motion-ease);
+}
+.icon-button:active:not(:disabled),
+.nav-item:active:not(:disabled),
+.mobile-nav button:active:not(:disabled),
+.category-row button:active:not(:disabled),
+.pagination-page:active:not(:disabled),
+.pagination-arrow:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.form-stack input,
+.form-stack select,
+.form-stack textarea,
+.create-form input,
+.create-form select,
+.create-form textarea,
+.filter-select-trigger {
+  transition:
+    border-color var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease),
+    background-color var(--motion-fast) var(--motion-ease);
+}
+
+.service-card-button {
+  transition:
+    transform var(--motion-state) var(--motion-ease),
+    box-shadow var(--motion-state) var(--motion-ease);
+}
+.service-card-button:hover {
+  transform: translateY(-2px);
+}
+.service-grid > * {
+  animation: motion-rise-in var(--motion-enter) var(--motion-ease) both;
+}
+.service-grid > :nth-child(2) { animation-delay: 24ms; }
+.service-grid > :nth-child(3) { animation-delay: 48ms; }
+.service-grid > :nth-child(4) { animation-delay: 72ms; }
+.page-content > .page-heading {
+  animation: motion-rise-in var(--motion-enter) var(--motion-ease) both;
+}
+
+.filter-select-menu {
+  animation-duration: var(--motion-state);
+  animation-timing-function: var(--motion-ease);
+  transform-origin: top right;
+}
+.modal-backdrop {
+  animation: motion-fade-in var(--motion-state) var(--motion-ease) both;
+}
+.service-modal {
+  animation: motion-modal-in var(--motion-state) var(--motion-ease) both;
+}
+.logout-modal {
+  animation-duration: var(--motion-state);
+  animation-timing-function: var(--motion-ease);
+}
+.toast {
+  animation: motion-toast-in var(--motion-state) var(--motion-ease) both;
+}
+.settings-switch > span,
+.settings-switch > span::after {
+  transition-duration: var(--motion-state);
+  transition-timing-function: var(--motion-change);
+}
+
+@keyframes motion-rise-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes motion-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes motion-modal-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes motion-toast-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

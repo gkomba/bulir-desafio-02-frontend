@@ -1,0 +1,83 @@
+@font-face { font-family: "Material Design Icons"; src: url("./fonts/MaterialCommunityIcons.ttf") format("truetype"); font-style: normal; font-weight: 400; font-display: block; }
+.material-design-icon {
+  display: inline-block;
+  flex: none;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: "Material Design Icons";
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+
+.nav-glyph {
+  width: 20px;
+  font-size: 20px;
+  text-align: center;
+}
+.top-notification-icon {
+  font-size: 20px;
+}
+.balance-icon {
+  font-size: 17px;
+}
+.stat-icon {
+  font-size: 17px;
+}
+.button-icon {
+  font-size: 17px;
+}
+.search-box > .material-design-icon {
+  font-size: 20px;
+}
+.favorite-mark {
+  font-size: 18px;
+}
+.favorite-mark > .material-design-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  line-height: 18px;
+  text-align: center;
+}
+.rating-icon {
+  font-size: 14px;
+  vertical-align: -2px;
+}
+.table-service-icon {
+  font-size: 15px;
+}
+.form-icon {
+  font-size: 19px;
+}
+.secure-note > .material-design-icon {
+  font-size: 13px;
+  vertical-align: -3px;
+}
+.image-placeholder .material-design-icon {
+  font-size: 27px;
+}
+.empty-state > .material-design-icon {
+  font-size: 21px;
+}
+.modal-close > .material-design-icon {
+  font-size: 19px;
+}
+.toast > .material-design-icon {
+  font-size: 14px;
+}
+.error-banner > button > .material-design-icon {
+  font-size: 16px;
+  vertical-align: -3px;
+}
+.mobile-nav .material-design-icon {
+  font-size: 21px;
+}

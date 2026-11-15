@@ -9,3 +9,6 @@ coverage/
 *.tsbuildinfo
 src/generated/
 .context
+# Next.js
+.next/
+next-env.d.ts

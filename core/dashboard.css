@@ -1,0 +1,9 @@
+.mobile-nav button {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 680px) {
+  .mobile-nav button {
+    min-width: 0;
+  }
+}
