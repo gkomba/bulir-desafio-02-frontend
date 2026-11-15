@@ -1,6 +1,6 @@
 // Serviços na API do desafio 1. Os dados entram e saem no formato do painel (ver adapters.js).
-import { api, json } from "./api";
-import { toService, toServiceBody } from "./adapters";
+import { api, json } from "./api.js";
+import { toService, toServiceBody } from "./adapters.js";
 
 export const createService = (data) =>
   api("/services", json("POST", toServiceBody(data))).then(toService);
