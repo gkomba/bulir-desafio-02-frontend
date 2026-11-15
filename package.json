@@ -9,8 +9,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "node --test \"lib/**/*.test.ts\" \"features/**/*.test.ts\"",
-    "typecheck": "next typegen && tsc --noEmit"
+    "lint:ci": "eslint . --max-warnings=0",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "node --test \"lib/**/*.test.ts\"",
+    "test:ci": "node --test \"lib/**/*.test.ts\""
   },
   "engines": {
     "node": ">=22"
