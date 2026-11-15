@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { defaultSchedule, newIdempotencyKey, toLocalInput } from "./bookings.js";
-import { statusLabel, toTransaction } from "./adapters.js";
+import { defaultSchedule, newIdempotencyKey, toLocalInput } from "./bookings.ts";
+import { statusLabel, toTransaction } from "./adapters.ts";
+import type { BookingDto, BookingStatus } from "../types/domain.ts";
 
 describe("defaultSchedule: amanhã às 09:00, no formato do campo de data e hora", () => {
   it("dá o dia seguinte às 09:00", () => {
@@ -30,7 +31,7 @@ describe("Idempotency-Key", () => {
   });
 
   it("sem randomUUID (http fora de localhost), gera uma chave válida na mesma", () => {
-    const sem = { getRandomValues: (bytes) => bytes.fill(171) };
+    const sem = { getRandomValues: (bytes: Uint8Array) => bytes.fill(171) };
     const key = newIdempotencyKey(sem);
     assert.equal(key, "ab".repeat(16));
     assert.match(key, /^[A-Za-z0-9_-]{1,64}$/);
@@ -42,7 +43,7 @@ describe("Idempotency-Key", () => {
 });
 
 describe("estado das contratações", () => {
-  const cases = [
+  const cases: [BookingStatus, string][] = [
     ["CONFIRMED", "Confirmada"],
     ["COMPLETED", "Concluída"],
     ["CANCELLED", "Cancelada"],
@@ -52,7 +53,8 @@ describe("estado das contratações", () => {
   }
 
   it("a transação traz a data marcada e o estado", () => {
-    const tx = toTransaction({ id: "b", serviceName: "S", providerId: "p", providerName: "P", clientId: "c", clientName: "C", priceCents: 100, status: "CONFIRMED", scheduledAt: "2026-12-01T10:00:00Z", createdAt: "2026-11-15T10:00:00Z" });
+    const booking: BookingDto = { id: "b", serviceId: "s", serviceName: "S", providerId: "p", providerName: "P", clientId: "c", clientName: "C", priceCents: 100, status: "CONFIRMED", scheduledAt: "2026-12-01T10:00:00Z", createdAt: "2026-11-15T10:00:00Z" };
+    const tx = toTransaction(booking);
     assert.equal(tx.scheduledAt, "2026-12-01T10:00:00Z");
     assert.equal(tx.status, "CONFIRMED");
   });
