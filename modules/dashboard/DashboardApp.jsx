@@ -49,6 +49,7 @@ function App() {
     () => false,
   );
   const [booting, setBooting] = useState(true);
+  const [bootError, setBootError] = useState("");
   const [page, setPage] = useState("home");
   const [services, setServices] = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -138,13 +139,16 @@ function App() {
     // A sessão vive em cookies httpOnly: pergunta-se à API quem está autenticado.
     // Sem sessão a resposta é 401 e aparece o ecrã de entrada.
     api("/auth/me")
-      .then((me) => {
+      .then(async (me) => {
         const account = toUser(me);
         setUser(account);
         restoreSettings(account);
-        return load(account);
+        await load(account).catch((e) => setError(e.message));
       })
-      .catch(() => {})
+      // 401 é o esperado sem sessão. Qualquer outro erro (rede, servidor) explica-se no ecrã de entrada.
+      .catch((e) => {
+        if (e.status !== 401) setBootError(e.message);
+      })
       .finally(() => setBooting(false));
   }, [load]);
   useEffect(() => {
@@ -327,6 +331,7 @@ function App() {
   if (!user)
     return (
       <Auth
+        notice={bootError}
         onLogin={(next) => {
           restoreSettings(next);
           setNotifications([]);

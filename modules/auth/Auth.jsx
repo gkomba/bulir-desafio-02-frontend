@@ -12,7 +12,7 @@ const urlParams = () =>
     ? new URLSearchParams()
     : new URLSearchParams(window.location.search);
 
-export default function Auth({ onLogin }) {
+export default function Auth({ onLogin, notice = "" }) {
   const [register, setRegister] = useState(
     () => urlParams().get("mode") === "register",
   );
@@ -38,6 +38,7 @@ export default function Auth({ onLogin }) {
     setBusy(true);
     // A API alojada pode estar a acordar: depois de uns segundos, explica a espera.
     const slowTimer = setTimeout(() => setSlow(true), 6000);
+    let created = false;
     try {
       const identifier = data.identifier.trim();
       if (register) {
@@ -51,6 +52,7 @@ export default function Auth({ onLogin }) {
             role: data.role,
           }),
         );
+        created = true;
       }
       // Entra-se com o e-mail ou com o NIF (só os prestadores têm NIF).
       const credentials = register
@@ -61,7 +63,14 @@ export default function Auth({ onLogin }) {
       const user = await api("/auth/login", json("POST", credentials));
       onLogin(toUser(user));
     } catch (e) {
-      setError(e.message);
+      if (created) {
+        // O registo correu bem e só a entrada falhou: leva para a entrada, com o e-mail já escrito.
+        setRegister(false);
+        setData((current) => ({ ...current, identifier: current.email }));
+        setError(`Conta criada, mas não foi possível entrar: ${e.message}`);
+      } else {
+        setError(e.message);
+      }
     } finally {
       clearTimeout(slowTimer);
       setSlow(false);
@@ -195,7 +204,7 @@ export default function Auth({ onLogin }) {
                 A ligar ao servidor… na primeira vez pode demorar até um minuto.
               </p>
             )}
-            {error && <p className="error-box">{error}</p>}
+            {(error || notice) && <p className="error-box">{error || notice}</p>}
             <button
               className="button button-primary button-wide"
               disabled={busy}
