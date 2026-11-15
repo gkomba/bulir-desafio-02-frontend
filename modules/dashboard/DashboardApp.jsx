@@ -8,7 +8,8 @@ import React, {
   useState,
   useSyncExternalStore,
 } from "react";
-import { api, json, setToken } from "../../core/api";
+import { allPages, api, json, UNAUTHORIZED_EVENT } from "../../core/api";
+import { toService, toTransaction, toUser } from "../../core/adapters";
 import { categories, money } from "../../core/format";
 import {
   playNotificationSound,
@@ -47,11 +48,7 @@ function App() {
     () => true,
     () => false,
   );
-  const [booting, setBooting] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      Boolean(window.localStorage.getItem("presta-ja.token")),
-  );
+  const [booting, setBooting] = useState(true);
   const [page, setPage] = useState("home");
   const [services, setServices] = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -110,12 +107,16 @@ function App() {
 
   const load = useCallback(async (currentUser) => {
     if (!currentUser) return;
-    const [nextServices, nextTransactions] = await Promise.all([
-      api(currentUser.role === "CLIENT" ? "/services" : "/services/mine"),
-      api("/transactions"),
+    const [nextServices, nextBookings] = await Promise.all([
+      // O cliente vê todos os serviços; o prestador, só os seus.
+      allPages(
+        "/services",
+        currentUser.role === "CLIENT" ? {} : { providerId: currentUser.id },
+      ),
+      allPages("/bookings"),
     ]);
-    setServices(nextServices);
-    setTransactions(nextTransactions);
+    setServices(nextServices.map(toService));
+    setTransactions(nextBookings.map(toTransaction));
   }, []);
 
   const restoreSettings = (account) => {
@@ -134,14 +135,16 @@ function App() {
     }
   };
   useEffect(() => {
-    if (!localStorage.getItem("presta-ja.token")) return;
-    api("/me")
+    // A sessão vive em cookies httpOnly: pergunta-se à API quem está autenticado.
+    // Sem sessão a resposta é 401 e aparece o ecrã de entrada.
+    api("/auth/me")
       .then((me) => {
-        setUser(me);
-        restoreSettings(me);
-        return load(me);
+        const account = toUser(me);
+        setUser(account);
+        restoreSettings(account);
+        return load(account);
       })
-      .catch(() => setToken(null))
+      .catch(() => {})
       .finally(() => setBooting(false));
   }, [load]);
   useEffect(() => {
@@ -177,8 +180,8 @@ function App() {
       setNotifications([]);
       setBooting(false);
     };
-    window.addEventListener("presta-ja:unauthorized", logout);
-    return () => window.removeEventListener("presta-ja:unauthorized", logout);
+    window.addEventListener(UNAUTHORIZED_EVENT, logout);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, logout);
   }, []);
   useEffect(() => {
     if (!toast) return;
@@ -305,7 +308,8 @@ function App() {
     }
   };
   const logout = () => {
-    setToken(null);
+    // A API revoga a sessão e limpa os cookies. Se falhar, sai-se na mesma deste lado.
+    api("/auth/logout", { method: "POST" }).catch(() => {});
     setUser(null);
     setNotifications([]);
     setPage("home");
@@ -373,7 +377,7 @@ function App() {
       setSelected(null);
       setHireCandidate(null);
     }, "Serviço contratado com sucesso.");
-    if (succeeded) setUser(await api("/me"));
+    if (succeeded) setUser(toUser(await api("/auth/me")));
   };
   const hire = (service) => {
     if (preferences.confirmHire) {
