@@ -77,20 +77,25 @@ export function Dashboard({ user, onUserChange, onSignOut }: DashboardProps) {
     setError("");
   }, []);
 
-  const value: AppContextValue = {
-    user,
-    services,
-    transactions,
-    busy,
-    run,
-    reload,
-    refreshUser,
-    notify: setToast,
-    fail: setError,
-    confirm: setConfirmation,
-    go,
-    signOut: () => setConfirmingSignOut(true),
-  };
+  const signOutRequest = useCallback(() => setConfirmingSignOut(true), []);
+  // Memorizado: sem isto, cada render do painel criava um valor novo e re-renderizava todas as páginas.
+  const value = useMemo<AppContextValue>(
+    () => ({
+      user,
+      services,
+      transactions,
+      busy,
+      run,
+      reload,
+      refreshUser,
+      notify: setToast,
+      fail: setError,
+      confirm: setConfirmation,
+      go,
+      signOut: signOutRequest,
+    }),
+    [user, services, transactions, busy, run, reload, refreshUser, go, signOutRequest],
+  );
 
   const runConfirmed = async () => {
     if (!confirmation) return;
@@ -144,7 +149,7 @@ export function Dashboard({ user, onUserChange, onSignOut }: DashboardProps) {
           </header>
           <section className="page-content">
             {error && (
-              <div className="error-banner">
+              <div className="error-banner" role="alert">
                 {error}
                 <button aria-label="Fechar aviso" onClick={() => setError("")}>
                   <Icon name="close" />
@@ -181,7 +186,7 @@ export function Dashboard({ user, onUserChange, onSignOut }: DashboardProps) {
           />
         )}
         {toast && (
-          <div className="toast">
+          <div className="toast" role="status">
             <Icon name="check" />
             {toast}
           </div>
