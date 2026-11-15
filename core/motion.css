@@ -92,11 +92,6 @@
 .toast {
   animation: motion-toast-in var(--motion-state) var(--motion-ease) both;
 }
-.settings-switch > span,
-.settings-switch > span::after {
-  transition-duration: var(--motion-state);
-  transition-timing-function: var(--motion-change);
-}
 
 @keyframes motion-rise-in {
   from { opacity: 0; transform: translateY(5px); }
