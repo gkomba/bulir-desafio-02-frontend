@@ -10,9 +10,12 @@ const addFunds = async (page: Page, kwanzas: number) => {
     await addCard(page);
     await goTo(page, "Carteira");
   }
+  const before = await walletBalance(page);
   await page.locator('input[name="amount"]').fill(String(kwanzas));
   await page.getByRole("button", { name: "Adicionar saldo" }).last().click();
   await expect(page.getByText("Saldo adicionado.")).toBeVisible();
+  // O painel volta a pedir o saldo à API depois do toast: só se segue quando o valor novo aparece
+  await expect.poll(() => walletBalance(page)).toBe(before + kwanzas);
 };
 
 // O cliente contrata o serviço (com a data por defeito: amanhã às 09:00).
