@@ -71,6 +71,7 @@ function App() {
   const [editingService, setEditingService] = useState(null);
   const [formKey, setFormKey] = useState(0);
   const [uploadProgress, setUploadProgress] = useState(null);
+  const [removeCandidate, setRemoveCandidate] = useState(null);
   // A imagem já enviada: se guardar o serviço falhar, tentar de novo não a reenvia.
   const uploadedImage = useRef(null);
   const [explorePage, setExplorePage] = useState(1);
@@ -214,6 +215,14 @@ function App() {
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [confirmLogout]);
   useEffect(() => {
+    if (!removeCandidate) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setRemoveCandidate(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [removeCandidate]);
+  useEffect(() => {
     if (!hireCandidate) return undefined;
     const closeOnEscape = (event) => {
       if (event.key === "Escape") setHireCandidate(null);
@@ -296,20 +305,26 @@ function App() {
   );
   const total = mine.reduce((sum, tx) => sum + tx.amount, 0);
 
+  // Devolve true se a operação correu bem. Se só a recarga da lista falhar, a operação já foi
+  // feita (e quem chamou deve tratá-la como feita: repetir criaria um serviço em duplicado).
   const action = async (work, success) => {
     setBusy(true);
     setError("");
     try {
       await work();
-      if (success) setToast(success);
-      await load(user);
-      return true;
     } catch (e) {
       setError(e.message);
-      return false;
-    } finally {
       setBusy(false);
+      return false;
     }
+    if (success) setToast(success);
+    try {
+      await load(user);
+    } catch (e) {
+      setError(e.message);
+    }
+    setBusy(false);
+    return true;
   };
   const markAllNotificationsRead = async () => {
     setNotificationsBusy(true);
@@ -439,6 +454,7 @@ function App() {
   const stopEditing = () => {
     setEditingService(null);
     setFormKey((key) => key + 1);
+    uploadedImage.current = null;
   };
   // Cria ou atualiza o serviço. A imagem só sai do navegador agora: vai direta ao Cloudinary com a
   // assinatura da API, e o endereço que ele devolve é o que se guarda no serviço.
@@ -468,9 +484,10 @@ function App() {
       stopEditing();
     }
   };
-  const deleteService = (service) => {
+  const deleteService = async (service) => {
+    setRemoveCandidate(null);
     if (editingService?.id === service.id) stopEditing();
-    return action(() => removeService(service.id), "Serviço removido.");
+    await action(() => removeService(service.id), "Serviço removido.");
   };
 
   return (
@@ -973,6 +990,7 @@ function App() {
                           type="button"
                           className="button button-outline"
                           disabled={busy}
+                          aria-label={`Editar ${service.title}`}
                           onClick={() => startEditing(service)}
                         >
                           Editar
@@ -981,7 +999,8 @@ function App() {
                           type="button"
                           className="button button-danger delete-service"
                           disabled={busy}
-                          onClick={() => deleteService(service)}
+                          aria-label={`Remover ${service.title}`}
+                          onClick={() => setRemoveCandidate(service)}
                         >
                           Remover
                         </button>
@@ -1184,6 +1203,42 @@ function App() {
                 {busy
                   ? language === "en" ? "Booking…" : "A contratar…"
                   : language === "en" ? "Confirm booking" : "Confirmar"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+      {removeCandidate && (
+        <div
+          className="modal-backdrop logout-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setRemoveCandidate(null);
+          }}
+        >
+          <section
+            className="logout-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="remove-title"
+          >
+            <span className="logout-modal-icon"><Icon name="close" /></span>
+            <h2 id="remove-title">Remover o serviço?</h2>
+            <p>
+              O serviço <b>{removeCandidate.title}</b> deixa de aparecer aos
+              clientes. Esta ação não pode ser desfeita.
+            </p>
+            <div className="logout-modal-actions">
+              <button
+                className="button button-outline"
+                onClick={() => setRemoveCandidate(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="button button-danger"
+                onClick={() => deleteService(removeCandidate)}
+              >
+                Remover
               </button>
             </div>
           </section>
