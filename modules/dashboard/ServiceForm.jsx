@@ -23,6 +23,20 @@ export default function ServiceForm({ editing, busy, progress, onSubmit, onCance
   const [imageError, setImageError] = useState("");
   const [preparing, setPreparing] = useState(false);
   const fileInput = useRef(null);
+  const titleInput = useRef(null);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  // Ao editar, o formulário pode estar fora do ecrã: leva-se o foco para o título.
+  useEffect(() => {
+    if (editing) titleInput.current?.focus();
+  }, [editing]);
 
   // Liberta o endereço temporário da pré-visualização ao trocar de imagem e ao sair.
   useEffect(() => {
@@ -40,11 +54,14 @@ export default function ServiceForm({ editing, busy, progress, onSubmit, onCance
     setPreparing(true);
     try {
       const blob = await prepareImage(file);
+      // Se o formulário já foi fechado (outro serviço em edição, ou cancelar), o endereço
+      // temporário nunca seria libertado.
+      if (!mounted.current) return;
       setImage({ kind: "new", blob, url: URL.createObjectURL(blob) });
     } catch (e) {
-      setImageError(e.message);
+      if (mounted.current) setImageError(e.message);
     } finally {
-      setPreparing(false);
+      if (mounted.current) setPreparing(false);
     }
   };
 
@@ -76,6 +93,7 @@ export default function ServiceForm({ editing, busy, progress, onSubmit, onCance
       <label>
         Título
         <input
+          ref={titleInput}
           name="title"
           required
           minLength="3"
@@ -113,6 +131,7 @@ export default function ServiceForm({ editing, busy, progress, onSubmit, onCance
           type="number"
           required
           min="1"
+          max="10000000"
           step="any"
           defaultValue={editing?.price}
           placeholder="Ex.: 8 000"
@@ -124,7 +143,14 @@ export default function ServiceForm({ editing, busy, progress, onSubmit, onCance
           <div className="image-field-preview">
             {shownImage ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={shownImage} alt="Pré-visualização da imagem do serviço" />
+              <img
+                src={shownImage}
+                alt={
+                  editing
+                    ? `Imagem do serviço ${editing.title}`
+                    : "Pré-visualização da imagem do serviço"
+                }
+              />
             ) : (
               <Icon name="image" />
             )}
@@ -160,9 +186,18 @@ export default function ServiceForm({ editing, busy, progress, onSubmit, onCance
               </button>
             )}
             {image.kind === "new" && (
-              <small>Pronta a enviar ({Math.round(image.blob.size / 1000)} KB)</small>
+              <small role="status">
+                Pronta a enviar ({Math.round(image.blob.size / 1000)} KB)
+              </small>
             )}
-            {imageError && <small className="image-field-error">{imageError}</small>}
+            {imageError && (
+              <small className="image-field-error" role="alert">
+                {imageError}
+              </small>
+            )}
+            {progress !== null && (
+              <small role="status">A enviar a imagem… {Math.round(progress * 100)}%</small>
+            )}
           </div>
         </div>
       </div>
