@@ -12,6 +12,9 @@ export type Session =
   | { status: "anonymous"; notice: string }
   | { status: "authenticated"; user: User };
 
+// O máximo que se espera pela API ao terminar a sessão.
+const LOGOUT_WAIT_MS = 4000;
+
 export function useSession() {
   const [session, setSession] = useState<Session>({ status: "loading" });
 
@@ -52,9 +55,13 @@ export function useSession() {
     [],
   );
 
-  // A API revoga a sessão e limpa os cookies. Se falhar, sai-se na mesma deste lado.
-  const signOut = useCallback(() => {
-    api("/auth/logout", { method: "POST" }).catch(() => {});
+  // A API revoga a sessão e limpa os cookies, por isso espera-se pela resposta antes de voltar à
+  // entrada: se a página fosse recarregada com o pedido a meio, o cookie ficava e a sessão
+  // continuava aberta. Se a API falhar ou demorar, sai-se na mesma deste lado.
+  const signOut = useCallback(async () => {
+    const logout = api("/auth/logout", { method: "POST" }).catch(() => {});
+    const timeout = new Promise((resolve) => setTimeout(resolve, LOGOUT_WAIT_MS));
+    await Promise.race([logout, timeout]);
     setSession({ status: "anonymous", notice: "" });
   }, []);
 
