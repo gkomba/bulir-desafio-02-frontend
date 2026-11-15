@@ -36,9 +36,9 @@ test.describe("contratação, carteira e histórico", () => {
     const before = await walletBalance(page);
 
     await hire(page, title);
-    // O saldo desce o preço do serviço
+    // O saldo desce o preço do serviço (o painel volta a pedi-lo à API: espera-se pelo valor novo)
     await goTo(page, "Carteira");
-    expect(await walletBalance(page)).toBe(before - 5000);
+    await expect.poll(() => walletBalance(page)).toBe(before - 5000);
 
     // O histórico mostra o serviço, o cliente, o prestador, o valor e o estado
     await goTo(page, "Histórico");
@@ -67,7 +67,7 @@ test.describe("contratação, carteira e histórico", () => {
     await expect(page.getByText("Contratação cancelada.")).toBeVisible();
     await expect(historyRow(page, title)).toContainText("Cancelada");
     await goTo(page, "Carteira");
-    expect(await walletBalance(page)).toBe(before);
+    await expect.poll(() => walletBalance(page)).toBe(before);
   });
 
   test("o prestador recebe o valor e conclui a contratação", async ({ client, provider }) => {
@@ -79,9 +79,13 @@ test.describe("contratação, carteira e histórico", () => {
     await addFunds(client.page, 10000);
     await hire(client.page, title);
 
-    // O valor entra logo no saldo do prestador
-    await openPage(provider.page, "Carteira");
-    expect(await walletBalance(provider.page)).toBe(providerBefore + 6000);
+    // O valor entra logo no saldo do prestador (recarrega-se a página: o saldo vem da API)
+    await expect
+      .poll(async () => {
+        await openPage(provider.page, "Carteira");
+        return walletBalance(provider.page);
+      })
+      .toBe(providerBefore + 6000);
 
     // O prestador conclui a contratação
     await goTo(provider.page, "Histórico");
@@ -96,8 +100,12 @@ test.describe("contratação, carteira e histórico", () => {
 
   test("sem saldo suficiente não se pode contratar", async ({ client, provider }) => {
     const { page } = client;
-    const title = await publish(provider, "Obra cara", 9_000_000);
+    const price = 9_000_000;
+    const title = await publish(provider, "Obra cara", price);
     await page.goto("/app");
+    // O saldo do cliente (de testes anteriores) é sempre muito menor do que o preço
+    await goTo(page, "Carteira");
+    expect(await walletBalance(page)).toBeLessThan(price);
 
     await openServiceDetail(page, title);
     await page.getByRole("button", { name: /Contratar serviço/ }).click();
@@ -120,8 +128,11 @@ test.describe("contratação, carteira e histórico", () => {
     await page.getByRole("button", { name: "Cancelar" }).click();
     // Fecha também o detalhe do serviço, que continua aberto por baixo
     await page.getByRole("button", { name: "Fechar" }).click();
-    await goTo(page, "Histórico");
-    await expect(historyRow(page, title)).toHaveCount(0);
+
+    // Não ficou nenhuma contratação (perguntado à API: a página ainda podia estar a carregar)
+    const response = await client.context.request.get("/v1/bookings?pageSize=100");
+    const { items } = (await response.json()) as { items: { serviceName: string }[] };
+    expect(items.some((booking) => booking.serviceName === title)).toBe(false);
   });
 
   test("o limite de um carregamento é de 1 000 000 Kz", async ({ client }) => {
