@@ -1,29 +1,49 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { assetUrl } from "../../lib/api";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { FilterSelect, type FilterOption } from "../../components/FilterSelect";
+import { Icon } from "../../components/Icon";
+import { assetUrl, errorMessage } from "../../lib/api";
 import { categories } from "../../lib/format";
 import { prepareImage } from "../../lib/images";
-import { Icon } from "../../components/Icon";
-import { FilterSelect } from "./components";
+import type { CategoryLabel, Service, ServiceInput } from "../../types/domain";
 
-const CATEGORY_OPTIONS = categories.slice(1).map((item) => ({
-  value: item,
-  label: item,
-}));
+const CATEGORY_OPTIONS: FilterOption<CategoryLabel>[] = categories
+  .filter((item): item is CategoryLabel => item !== "Todos")
+  .map((item) => ({ value: item, label: item }));
+
+/**
+ * O que fazer à imagem do serviço ao guardar: deixá-la como está, tirá-la, ou pôr uma nova (já
+ * comprimida, com o endereço temporário da pré-visualização).
+ */
+export type ImageChoice =
+  | { kind: "keep" }
+  | { kind: "remove" }
+  | { kind: "new"; blob: Blob; url: string };
+
+/** Os campos do formulário. A imagem vai à parte, em `ImageChoice`. */
+export type ServiceFields = Omit<ServiceInput, "imageUrl">;
+
+interface ServiceFormProps {
+  /** O serviço em edição; sem ele, o formulário cria um novo. */
+  editing: Service | null;
+  busy: boolean;
+  /** O progresso do envio da imagem (0 a 1), ou null se não há envio. */
+  progress: number | null;
+  onSubmit: (fields: ServiceFields, image: ImageChoice) => void;
+  onCancel: () => void;
+}
 
 // Criar e editar um serviço (o mesmo formulário). Quem o usa dá-lhe uma `key` diferente para cada
 // serviço editado, para os campos recomeçarem. A imagem só sai do navegador ao guardar: é
 // reduzida e comprimida aqui e devolvida em `onSubmit` para quem guarda a enviar.
-export default function ServiceForm({ editing, busy, progress, onSubmit, onCancel }) {
-  const [category, setCategory] = useState(editing?.category ?? categories[1]);
-  // keep: fica como está · remove: tira a imagem · new: uma imagem nova, já comprimida
-  // (com o endereço temporário da pré-visualização).
-  const [image, setImage] = useState({ kind: "keep" });
+export function ServiceForm({ editing, busy, progress, onSubmit, onCancel }: ServiceFormProps) {
+  const [category, setCategory] = useState<CategoryLabel>(editing?.category ?? "Casa");
+  const [image, setImage] = useState<ImageChoice>({ kind: "keep" });
   const [imageError, setImageError] = useState("");
   const [preparing, setPreparing] = useState(false);
-  const fileInput = useRef(null);
-  const titleInput = useRef(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const titleInput = useRef<HTMLInputElement>(null);
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -40,13 +60,13 @@ export default function ServiceForm({ editing, busy, progress, onSubmit, onCance
 
   // Liberta o endereço temporário da pré-visualização ao trocar de imagem e ao sair.
   useEffect(() => {
-    const url = image.url;
+    const url = image.kind === "new" ? image.url : "";
     return () => {
       if (url) URL.revokeObjectURL(url);
     };
   }, [image]);
 
-  const pick = async (event) => {
+  const pick = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
@@ -59,7 +79,7 @@ export default function ServiceForm({ editing, busy, progress, onSubmit, onCance
       if (!mounted.current) return;
       setImage({ kind: "new", blob, url: URL.createObjectURL(blob) });
     } catch (e) {
-      if (mounted.current) setImageError(e.message);
+      if (mounted.current) setImageError(errorMessage(e));
     } finally {
       if (mounted.current) setPreparing(false);
     }
@@ -72,7 +92,7 @@ export default function ServiceForm({ editing, busy, progress, onSubmit, onCance
         ? assetUrl(editing?.imageUrl)
         : "";
 
-  const submit = (event) => {
+  const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     onSubmit(
@@ -96,8 +116,8 @@ export default function ServiceForm({ editing, busy, progress, onSubmit, onCance
           ref={titleInput}
           name="title"
           required
-          minLength="3"
-          maxLength="80"
+          minLength={3}
+          maxLength={80}
           defaultValue={editing?.title}
           placeholder="Ex.: Canalização residencial"
         />
@@ -117,9 +137,9 @@ export default function ServiceForm({ editing, busy, progress, onSubmit, onCance
         <textarea
           name="description"
           required
-          minLength="10"
-          maxLength="500"
-          rows="4"
+          minLength={10}
+          maxLength={500}
+          rows={4}
           defaultValue={editing?.description}
           placeholder="Descreva o serviço que oferece"
         />
@@ -130,8 +150,8 @@ export default function ServiceForm({ editing, busy, progress, onSubmit, onCance
           name="price"
           type="number"
           required
-          min="1"
-          max="10000000"
+          min={1}
+          max={10000000}
           step="any"
           defaultValue={editing?.price}
           placeholder="Ex.: 8 000"

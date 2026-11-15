@@ -34,21 +34,6 @@
 .search-box > .material-design-icon {
   font-size: 20px;
 }
-.favorite-mark {
-  font-size: 18px;
-}
-.favorite-mark > .material-design-icon {
-  display: block;
-  width: 18px;
-  height: 18px;
-  font-size: 18px;
-  line-height: 18px;
-  text-align: center;
-}
-.rating-icon {
-  font-size: 14px;
-  vertical-align: -2px;
-}
 .table-service-icon {
   font-size: 15px;
 }
