@@ -15,6 +15,12 @@ async function loginThroughUi(page: Page, identifier: string, password: string) 
 const menu = (page: Page) => page.locator("nav .nav-item");
 
 test.describe("autenticação", () => {
+  test("do ecrã de entrada volta-se à landing page", async ({ page }) => {
+    await page.goto("/app");
+    await page.getByRole("link", { name: "Voltar ao início" }).click();
+    await expect(page).toHaveURL("/");
+  });
+
   test("uma palavra-passe errada mostra o erro e fica na entrada", async ({ page, request }) => {
     const account = newAccount("CLIENT");
     await register(request, account);

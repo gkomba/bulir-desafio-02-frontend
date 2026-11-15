@@ -3,6 +3,7 @@
 const iconGlyphs = {
   account_balance_wallet: "wallet",
   add: "plus",
+  arrow_back: "arrow-left",
   arrow_forward: "arrow-right",
   arrow_outward: "arrow-top-right",
   arrow_upward: "arrow-up",
@@ -46,7 +47,7 @@ const iconGlyphs = {
 } as const;
 
 const iconCodepoints = {
-  wallet: 984452, plus: 984085, "arrow-right": 983124, "arrow-top-right": 983132,
+  wallet: 984452, "arrow-left": 983117, plus: 984085, "arrow-right": 983124, "arrow-top-right": 983132,
   "arrow-up": 983133, "auto-fix": 983144, check: 983340, "check-circle": 984544,
   "chevron-right": 983362, close: 983382, "credit-card": 987119,
   devices: 987056, download: 983514, "view-grid": 984432, help: 983766,

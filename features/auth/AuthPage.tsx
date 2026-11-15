@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import Link from "next/link";
 import { Brand } from "../../components/Brand";
 import { Icon } from "../../components/Icon";
 import { api, errorMessage, json } from "../../lib/api";
@@ -122,6 +123,9 @@ export function AuthPage({ onLogin, notice = "" }: AuthPageProps) {
           <Brand />
         </div>
         <div className="auth-box">
+          <Link className="auth-back" href="/">
+            <Icon name="arrow_back" /> Voltar ao início
+          </Link>
           <span className="eyebrow">
             {register ? "COMECE AGORA" : "BEM-VINDO DE VOLTA"}
           </span>
