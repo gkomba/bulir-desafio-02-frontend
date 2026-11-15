@@ -69,5 +69,13 @@ export const toTransaction = (booking) => ({
   clientName: booking.clientName,
   amount: toKwanzas(booking.priceCents),
   status: booking.status,
+  scheduledAt: booking.scheduledAt,
   createdAt: booking.createdAt,
 });
+
+const STATUS_LABELS = {
+  CONFIRMED: "Confirmada",
+  COMPLETED: "Concluída",
+  CANCELLED: "Cancelada",
+};
+export const statusLabel = (status) => STATUS_LABELS[status] ?? status;

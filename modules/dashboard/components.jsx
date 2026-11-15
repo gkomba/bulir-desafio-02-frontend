@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { assetUrl } from "../../core/api";
 import { Icon } from "../../core/ui";
-import { date, money } from "../../core/format";
+import { statusLabel } from "../../core/adapters";
+import { date, dateTime, money } from "../../core/format";
 
 export function ServiceImage({ service, large = false }) {
   const [failed, setFailed] = useState(false);
@@ -64,7 +65,9 @@ export function ServiceCard({ service, onClick }) {
   );
 }
 
-export function TransactionTable({ rows, isClient }) {
+// O histórico de contratações: serviço, cliente, prestador, quando, estado e valor. Com `onCancel`
+// (cliente) e `onComplete` (prestador), as contratações confirmadas ganham a sua ação.
+export function TransactionTable({ rows, isClient, busy = false, onCancel, onComplete }) {
   if (!rows.length)
     return (
       <Empty
@@ -72,16 +75,19 @@ export function TransactionTable({ rows, isClient }) {
         text="As suas contratações e vendas vão aparecer aqui."
       />
     );
+  const act = isClient ? onCancel : onComplete;
   return (
     <div className="panel table-panel">
       <table>
         <thead>
           <tr>
             <th>Serviço</th>
-            <th>{isClient ? "Prestador" : "Cliente"}</th>
-            <th>Data</th>
+            <th>Cliente</th>
+            <th>Prestador</th>
+            <th>Marcada para</th>
             <th>Estado</th>
             <th className="align-right">Valor</th>
+            {act && <th className="align-right">Ação</th>}
           </tr>
         </thead>
         <tbody>
@@ -91,16 +97,32 @@ export function TransactionTable({ rows, isClient }) {
                 <Icon name="arrow_outward" className="table-service-icon" />
                 <b>{tx.serviceTitle}</b>
               </td>
-              <td>{isClient ? tx.providerName : tx.clientName}</td>
-              <td>{date(tx.createdAt)}</td>
+              <td>{tx.clientName}</td>
+              <td>{tx.providerName}</td>
+              <td>{dateTime(tx.scheduledAt)}</td>
               <td>
-                <span className="status-pill">
-                  <i /> Concluído
+                <span className={`status-pill is-${tx.status.toLowerCase()}`}>
+                  <i /> {statusLabel(tx.status)}
                 </span>
               </td>
               <td className="align-right">
                 <b>{money(tx.amount)}</b>
               </td>
+              {act && (
+                <td className="align-right">
+                  {tx.status === "CONFIRMED" && (
+                    <button
+                      type="button"
+                      className="button button-outline table-action"
+                      disabled={busy}
+                      aria-label={`${isClient ? "Cancelar" : "Concluir"} ${tx.serviceTitle}`}
+                      onClick={() => act(tx)}
+                    >
+                      {isClient ? "Cancelar" : "Concluir"}
+                    </button>
+                  )}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

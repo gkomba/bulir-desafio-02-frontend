@@ -12,10 +12,12 @@ const PAGE_SIZE = 100;
 export const UNAUTHORIZED_EVENT = "bulir:unauthorized";
 
 export class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, body = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    // O corpo da resposta de erro: um pagamento recusado (402) traz aqui o pagamento e a razão.
+    this.body = body;
   }
 }
 
@@ -94,7 +96,7 @@ export const api = async (path, { retry = true, ...options } = {}) => {
   }
   if (!response.ok) {
     const body = await response.json().catch(() => null);
-    throw new ApiError(messageFor(response.status, body), response.status);
+    throw new ApiError(messageFor(response.status, body), response.status, body);
   }
   return response.status === 204 ? null : response.json();
 };
