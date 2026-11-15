@@ -1660,13 +1660,41 @@ textarea:focus-visible {
   .table-panel td {
     height: 53px;
   }
-  .table-panel th:nth-child(3),
-  .table-panel td:nth-child(3) {
+  /* No telemóvel cada contratação é um cartão com todos os campos (serviço, cliente, prestador, data, estado e valor). */
+  .table-panel table,
+  .table-panel tbody {
+    display: block;
+    white-space: normal;
+  }
+  .table-panel thead {
     display: none;
   }
-  .table-panel th,
+  .table-panel tr {
+    display: block;
+    padding: 12px 17px;
+    border-bottom: 1px solid #e6edf0;
+  }
   .table-panel td {
-    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: auto;
+    padding: 4px 0;
+    font-size: 12px;
+    text-align: right;
+  }
+  .table-panel td[data-label]::before {
+    content: attr(data-label);
+    color: #6b7a86;
+    font-weight: 600;
+    text-align: left;
+  }
+  .table-panel td.tx-service {
+    justify-content: flex-start;
+    padding-bottom: 8px;
+    font-size: 14px;
+    text-align: left;
   }
   .wallet-layout {
     gap: 11px;
