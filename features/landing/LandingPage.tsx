@@ -1,8 +1,28 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Brand } from "../../components/Brand";
-import { Icon } from "../../components/Icon";
+import { Icon, type IconName } from "../../components/Icon";
 
-const content = {
+export type Audience = "client" | "provider";
+
+interface Content {
+  role: string;
+  eyebrow: string;
+  title: ReactNode;
+  intro: string;
+  primary: string;
+  secondary: string;
+  imageTitle: string;
+  imageCategory: string;
+  imageDescription: string;
+  steps: readonly (readonly [string, string, string])[];
+  featureTitle: string;
+  featureCopy: string;
+  calloutTitle: string;
+  calloutCopy: string;
+}
+
+const content: Record<Audience, Content> = {
   client: {
     role: "Cliente",
     eyebrow: "SERVIÇOS LOCAIS, SEM COMPLICAÇÃO",
@@ -45,7 +65,7 @@ const content = {
   },
 };
 
-const categories = [
+const categories: readonly (readonly [IconName, string])[] = [
   ["home_repair_service", "Casa"],
   ["face", "Beleza"],
   ["devices", "Tecnologia"],
@@ -55,12 +75,20 @@ const categories = [
   ["directions_car", "Automóvel"],
 ];
 
-function ArrowLink({ href, children, className = "" }) {
+function ArrowLink({
+  href,
+  children,
+  className = "",
+}: {
+  href: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return <Link className={className} href={href}>{children}<Icon name="arrow_outward" /></Link>;
 }
 
-export default function LandingPage({ audience = "client" }) {
-  const current = content[audience] ?? content.client;
+export function LandingPage({ audience = "client" }: { audience?: Audience }) {
+  const current = content[audience];
   const isClient = audience !== "provider";
   const oppositeHref = isClient ? "/prestador" : "/cliente";
   const signupHref = `/app?mode=register&role=${isClient ? "CLIENT" : "PROVIDER"}`;
@@ -68,7 +96,7 @@ export default function LandingPage({ audience = "client" }) {
   return (
     <main className="landing-page">
       <header className="landing-header landing-container">
-        <Link href="/" aria-label="Presta-ja, página inicial"><Brand small /></Link>
+        <Link href="/" aria-label="Bulir, página inicial"><Brand small /></Link>
         <nav className="landing-nav" aria-label="Navegação principal">
           <Link href="/cliente" className={isClient ? "current" : ""}>Cliente</Link>
           <Link href="/prestador" className={!isClient ? "current" : ""}>Prestador</Link>
@@ -104,7 +132,7 @@ export default function LandingPage({ audience = "client" }) {
           </div>
           <div className="landing-float landing-float-one"><span className="landing-float-icon"><Icon name={isClient ? "account_balance_wallet" : "notifications"} /></span><span><b>{isClient ? "A sua carteira" : "Acompanhe a atividade"}</b><small>{isClient ? "Saldo e movimentos num só lugar" : "Serviços e carteira na sua conta"}</small></span></div>
           <div className="landing-float landing-float-two"><span className="landing-float-check"><Icon name="check" /></span><span><b>{isClient ? "Preço à vista" : "Serviço publicado"}</b><small>{isClient ? "Consulte antes de contratar" : "Pronto para ser encontrado"}</small></span></div>
-          <span className="landing-preview-caption">Pré-visualização do Presta-ja</span>
+          <span className="landing-preview-caption">Pré-visualização do Bulir</span>
         </div>
       </section>
 
@@ -116,7 +144,7 @@ export default function LandingPage({ audience = "client" }) {
 
       <section className="landing-how" id="como-funciona">
         <div className="landing-container">
-          <div className="landing-section-heading"><span className="landing-eyebrow">SEM COMPLICAÇÕES</span><h2>Um caminho claro<br /><em>do início ao próximo passo.</em></h2><p>O Presta-ja organiza a experiência para cada lado da contratação.</p></div>
+          <div className="landing-section-heading"><span className="landing-eyebrow">SEM COMPLICAÇÕES</span><h2>Um caminho claro<br /><em>do início ao próximo passo.</em></h2><p>O Bulir organiza a experiência para cada lado da contratação.</p></div>
           <div className="landing-steps">{current.steps.map(([number, title, description]) => <article className="landing-step" key={number}><span>{number}</span><h3>{title}</h3><p>{description}</p><i /></article>)}</div>
         </div>
       </section>
@@ -130,7 +158,7 @@ export default function LandingPage({ audience = "client" }) {
         <div className="landing-container landing-faq-inner">
           <div className="landing-faq-heading"><span className="landing-eyebrow">PERGUNTAS FREQUENTES</span><h2>Ficou com dúvidas?</h2><p>Comece com o essencial e explore a plataforma quando estiver pronto.</p></div>
           <div className="landing-faq-list">
-            <details><summary>Como começo a usar o Presta-ja?<Icon name="keyboard_arrow_down" /></summary><p>Crie uma conta como cliente ou prestador. Depois, aceda à sua área para explorar serviços ou publicar os seus.</p></details>
+            <details><summary>Como começo a usar o Bulir?<Icon name="keyboard_arrow_down" /></summary><p>Crie uma conta como cliente ou prestador. Depois, aceda à sua área para explorar serviços ou publicar os seus.</p></details>
             <details><summary>Posso usar a plataforma como cliente e prestador?<Icon name="keyboard_arrow_down" /></summary><p>Escolha o tipo de conta ao criar o perfil. Pode conhecer as duas experiências através das páginas Cliente e Prestador.</p></details>
             <details><summary>Onde acompanho os serviços e a carteira?<Icon name="keyboard_arrow_down" /></summary><p>Depois de entrar, a sua área reúne as opções disponíveis para o seu perfil, incluindo serviços, carteira e histórico.</p></details>
           </div>
@@ -143,7 +171,7 @@ export default function LandingPage({ audience = "client" }) {
 
       <section className="landing-cta landing-container"><div className="landing-cta-panel"><div><span className="landing-eyebrow">PRESTA-JA</span><h2>{current.calloutTitle}</h2><p>{current.calloutCopy}</p></div><Link className="landing-button landing-button-dark" href={signupHref}>{isClient ? "Criar conta de cliente" : "Criar conta de prestador"}<Icon name="arrow_forward" /></Link><span className="landing-cta-orb" /></div></section>
 
-      <footer className="landing-footer"><div className="landing-container landing-footer-inner"><Link href="/" aria-label="Presta-ja"><Brand small /></Link><span>Serviços locais, ligações que fazem sentido.</span><div><Link href="/cliente">Cliente</Link><Link href="/prestador">Prestador</Link><Link href="/app">Entrar</Link></div><small>© {new Date().getFullYear()} Presta-ja</small></div></footer>
+      <footer className="landing-footer"><div className="landing-container landing-footer-inner"><Link href="/" aria-label="Bulir"><Brand small /></Link><span>Serviços locais, ligações que fazem sentido.</span><div><Link href="/cliente">Cliente</Link><Link href="/prestador">Prestador</Link><Link href="/app">Entrar</Link></div><small>© {new Date().getFullYear()} Bulir</small></div></footer>
     </main>
   );
 }
