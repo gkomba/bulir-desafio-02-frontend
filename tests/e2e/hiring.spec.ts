@@ -1,11 +1,15 @@
 import type { Page } from "@playwright/test";
-import { createServiceByApi } from "./support/accounts";
+import { createServiceByApi, newAccount, register, signIn } from "./support/accounts";
 import { expect, test, uniqueName, type Session } from "./support/fixtures";
-import { goTo, historyRow, openPage, openServiceDetail, walletBalance } from "./support/ui";
+import { addCard, goTo, historyRow, openPage, openServiceDetail, walletBalance } from "./support/ui";
 
-// O cliente carrega saldo pela carteira.
+// O cliente carrega saldo pela carteira, com um cartão guardado (adiciona-o na primeira vez).
 const addFunds = async (page: Page, kwanzas: number) => {
   await goTo(page, "Carteira");
+  if ((await page.getByLabel("Pagar com").count()) === 0) {
+    await addCard(page);
+    await goTo(page, "Carteira");
+  }
   await page.locator('input[name="amount"]').fill(String(kwanzas));
   await page.getByRole("button", { name: "Adicionar saldo" }).last().click();
   await expect(page.getByText("Saldo adicionado.")).toBeVisible();
@@ -27,6 +31,24 @@ const publish = async (provider: Session, prefix: string, priceKz: number): Prom
 };
 
 test.describe("contratação, carteira e histórico", () => {
+  test("sem cartão guardado não se carrega saldo: pede-se um cartão em Definições", async ({ page, request }) => {
+    const account = newAccount("CLIENT");
+    await register(request, account);
+    await signIn(page.context().request, account);
+    await page.goto("/app");
+
+    await goTo(page, "Carteira");
+    await expect(page.getByText("adicione primeiro um cartão em Definições")).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Adicionar saldo/ })).toBeDisabled();
+
+    // O atalho leva às Definições; com o cartão guardado, o carregamento fica disponível
+    await page.getByRole("button", { name: "Adicionar cartão" }).click();
+    await addCard(page);
+    await goTo(page, "Carteira");
+    await expect(page.getByLabel("Pagar com")).toContainText("Visa •••• 4242");
+    await expect(page.getByRole("button", { name: /^Adicionar saldo/ })).toBeEnabled();
+  });
+
   test("o cliente carrega saldo, contrata e vê a contratação no histórico", async ({ client, provider }) => {
     const { page } = client;
     const title = await publish(provider, "Pintura", 5000);

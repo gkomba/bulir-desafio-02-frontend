@@ -9,6 +9,7 @@ Aplicação web da plataforma de contratação de prestadores de serviços, em N
 | Login com e-mail ou NIF e palavra-passe | `features/auth` |
 | Prestador: criar, listar, editar e excluir serviços (título, descrição, preço, imagem) | `features/services` (`MyServicesPage`, `ServiceForm`) |
 | Cliente: ver todos os serviços e contratá-los, com verificação de saldo | `features/services` (`ExplorePage`) e `features/bookings` (`HireModal`) |
+| Cliente: carregar saldo com um cartão guardado (como na app móvel; o pagamento é simulado) | `features/wallet` e `features/account` |
 | Saldo do cliente e do prestador atualizado ao contratar | `features/wallet` e `features/bookings` |
 | Histórico de transações: serviço, prestador, cliente e valor | `features/bookings` (`HistoryPage`) |
 
@@ -72,7 +73,7 @@ Em https://bulir-frontend.vercel.app há quatro contas de demonstração, com se
 | Prestador | `barbeiro@seed.bulir.dev` | Seis serviços (beleza, casa, educação e tecnologia) |
 | Prestador | `massagista@seed.bulir.dev` | Cinco serviços (saúde, automóvel, eventos, tecnologia e educação) |
 
-A API limita os logins a 5 por minuto: se aparecer um aviso de demasiados pedidos, espere um minuto. Para ver tudo de raiz, crie a sua conta em "Criar conta".
+Para carregar saldo é preciso um cartão guardado: em Definições, adicione um (qualquer número de 16 dígitos serve, o pagamento é simulado). A API limita os logins a 5 por minuto: se aparecer um aviso de demasiados pedidos, espere um minuto. Para ver tudo de raiz, crie a sua conta em "Criar conta".
 
 ## Testes de interface
 

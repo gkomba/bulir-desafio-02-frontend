@@ -11,6 +11,16 @@ export const goTo = async (page: Page, name: string | RegExp): Promise<void> => 
   await page.locator("nav .nav-item").filter({ hasText: name }).click();
 };
 
+/** Adiciona um cartão (Visa) em Definições: o carregamento de saldo exige um cartão guardado. */
+export const addCard = async (page: Page, number = "4242 4242 4242 4242"): Promise<void> => {
+  await goTo(page, "Definições");
+  await page.getByLabel("Nome do titular").fill("Cliente de Teste");
+  await page.getByLabel("Número do cartão").fill(number);
+  await page.getByLabel("Validade (MM/AA)").fill("12/39");
+  await page.getByRole("button", { name: "Adicionar cartão" }).click();
+  await expect(page.getByText("Cartão adicionado.")).toBeVisible();
+};
+
 /** "15 000,00 Kz" passa a 15000. */
 export const parseKz = (text: string | null): number =>
   Number((text ?? "").replace(/[^\d,]/g, "").replace(",", "."));
