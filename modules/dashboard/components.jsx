@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { assetUrl } from "../../core/api";
+import { optimizedUrl, srcSet } from "../../core/cloudinary";
 import { Icon } from "../../core/ui";
 import { statusLabel } from "../../core/adapters";
 import { date, dateTime, money } from "../../core/format";
@@ -9,9 +10,20 @@ import { date, dateTime, money } from "../../core/format";
 export function ServiceImage({ service, large = false }) {
   const [failed, setFailed] = useState(false);
   return service.imageUrl && !failed ? (
+    // `<img>` e não `next/image`: o Cloudinary já entrega o tamanho, o formato e a qualidade certos
+    // (ver core/cloudinary.js), e o otimizador do Next voltaria a processar a imagem.
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       className={`service-image ${large ? "service-image-large" : ""}`}
-      src={assetUrl(service.imageUrl)}
+      src={optimizedUrl(assetUrl(service.imageUrl), large ? 720 : 480)}
+      srcSet={srcSet(assetUrl(service.imageUrl))}
+      sizes={
+        large
+          ? "(max-width: 900px) 100vw, 640px"
+          : "(max-width: 700px) 100vw, 340px"
+      }
+      loading="lazy"
+      decoding="async"
       alt=""
       onError={() => setFailed(true)}
     />

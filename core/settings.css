@@ -152,48 +152,6 @@
   color: var(--green);
   font-weight: 700;
 }
-.settings-switch {
-  position: relative;
-  display: inline-flex;
-  width: 39px;
-  height: 22px;
-  flex: none;
-  cursor: pointer;
-}
-.settings-switch input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-}
-.settings-switch > span {
-  width: 39px;
-  height: 22px;
-  border-radius: 99px;
-  background: #cbd1da;
-  transition: background 0.18s;
-}
-.settings-switch > span:after {
-  content: "";
-  display: block;
-  width: 16px;
-  height: 16px;
-  margin: 3px;
-  border-radius: 50%;
-  background: white;
-  box-shadow: 0 1px 3px #0002;
-  transition: transform 0.18s;
-}
-.settings-switch input:checked + span {
-  background: #20bb9b;
-}
-.settings-switch input:checked + span:after {
-  transform: translateX(17px);
-}
-.settings-switch input:focus-visible + span {
-  outline: 3px solid rgba(50, 226, 194, 0.42);
-  outline-offset: 2px;
-}
 .settings-empty {
   padding: 12px 0;
   color: var(--muted);
@@ -353,4 +311,27 @@
   .settings-panel {
     padding: 0 12px;
   }
+}
+
+/* Dados da conta, só de leitura */
+.settings-details {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 0;
+}
+.settings-details > div {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  font-size: 13px;
+}
+.settings-details dt {
+  color: #748394;
+  font-weight: 600;
+}
+.settings-details dd {
+  margin: 0;
+  color: #1f2c40;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
