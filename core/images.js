@@ -65,7 +65,11 @@ export async function prepareImage(file) {
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
-      canvas.getContext("2d").drawImage(bitmap, 0, 0, width, height);
+      const context = canvas.getContext("2d");
+      // O JPEG não tem transparência: sem um fundo, um PNG ou WebP transparente ficava preto.
+      context.fillStyle = "#fff";
+      context.fillRect(0, 0, width, height);
+      context.drawImage(bitmap, 0, 0, width, height);
       for (const quality of QUALITIES) {
         const blob = await toBlob(canvas, quality);
         if (blob.size <= TARGET_BYTES) return blob;
@@ -129,5 +133,7 @@ export const uploadImage = (blob, auth, onProgress = () => {}) =>
       reject(new Error("Sem ligação ao enviar a imagem. Verifique a rede."));
     request.ontimeout = () =>
       reject(new Error("O envio da imagem demorou demasiado."));
+    request.onabort = () =>
+      reject(new Error("O envio da imagem foi interrompido."));
     request.send(form);
   });
