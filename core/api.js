@@ -33,14 +33,23 @@ const messageFor = (status, body) => {
 // uma renovação de cada vez: dois pedidos em paralelo revogariam a sessão.
 let refreshing = null;
 const refreshSession = () => {
-  refreshing ??= fetch(`${BASE}/auth/refresh`, { method: "POST" })
-    .then(
-      (response) => response.ok,
-      () => false,
-    )
-    .finally(() => {
-      refreshing = null;
-    });
+  if (!refreshing) {
+    // Com o mesmo limite dos outros pedidos: um servidor a acordar não pode prender todos à espera.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    refreshing = fetch(`${BASE}/auth/refresh`, {
+      method: "POST",
+      signal: controller.signal,
+    })
+      .then(
+        (response) => response.ok,
+        () => false,
+      )
+      .finally(() => {
+        clearTimeout(timer);
+        refreshing = null;
+      });
+  }
   return refreshing;
 };
 
@@ -76,12 +85,11 @@ export const api = async (path, { retry = true, ...options } = {}) => {
     clearTimeout(timer);
   }
 
-  if (
-    response.status === 401 &&
-    retry &&
-    !WITHOUT_REFRESH.includes(path)
-  ) {
-    if (await refreshSession()) return api(path, { ...options, retry: false });
+  if (response.status === 401 && !WITHOUT_REFRESH.includes(path)) {
+    // A sessão pode ter só o token de acesso caducado: renova-se e repete-se o pedido uma vez.
+    if (retry && (await refreshSession()))
+      return api(path, { ...options, retry: false });
+    // Sem renovação, ou com o pedido repetido a falhar na mesma: a sessão acabou.
     window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
   }
   if (!response.ok) {
