@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Icon } from "../../components/Icon";
 import { newIdempotencyKey } from "../../lib/bookings";
 import { money } from "../../lib/format";
 import { addBalance, MAX_PAYMENT_KWANZAS } from "../../lib/payments";
 import { ApiError } from "../../lib/api";
+import { useCards } from "../account/useCards";
 import { useApp } from "../dashboard/AppContext";
 import { TransactionTable } from "../bookings/TransactionTable";
 
@@ -14,7 +15,13 @@ const QUICK_AMOUNTS = [5000, 10000, 25000, 50000] as const;
 // A carteira. O cliente carrega saldo (pagamentos simulados); o prestador recebe-o ao ser
 // contratado e só o consulta (o backend não tem levantamentos).
 export function WalletPage() {
-  const { user, transactions, busy, run, refreshUser, fail } = useApp();
+  const { user, transactions, busy, run, refreshUser, fail, go } = useApp();
+  const { cards } = useCards(user.id);
+  // O cartão escolhido, se ainda existir; senão o predefinido (os cartões podem ser removidos).
+  const [chosen, setChosen] = useState("");
+  const cardId = cards.some((card) => card.id === chosen)
+    ? chosen
+    : (cards.find((card) => card.isDefault) ?? cards[0])?.id;
   const isClient = user.role === "CLIENT";
   // A Idempotency-Key do carregamento em curso: a mesma enquanto o valor for o mesmo e o resultado
   // for incerto (rede, servidor), para repetir não carregar duas vezes. Uma recusa certa usa uma
@@ -25,6 +32,7 @@ export function WalletPage() {
     event.preventDefault();
     const form = event.currentTarget;
     const amount = Number(String(new FormData(form).get("amount")).replace(",", "."));
+    if (!cardId) return fail("Adicione um cartão em Definições para carregar saldo.");
     if (!(amount > 0)) return fail("Introduza um valor maior que zero.");
     if (amount > MAX_PAYMENT_KWANZAS)
       return fail(`O valor máximo de cada carregamento é ${money(MAX_PAYMENT_KWANZAS)}.`);
@@ -91,6 +99,26 @@ export function WalletPage() {
               </div>
             </div>
             <form className="form-stack" onSubmit={submit}>
+              {cards.length === 0 ? (
+                <div className="wallet-no-card">
+                  <p>Para adicionar saldo, adicione primeiro um cartão em Definições.</p>
+                  <button type="button" className="button button-outline" onClick={() => go("settings")}>
+                    <Icon name="credit_card" /> Adicionar cartão
+                  </button>
+                </div>
+              ) : (
+                <label>
+                  Pagar com
+                  <select name="card" value={cardId} onChange={(event) => setChosen(event.target.value)}>
+                    {cards.map((card) => (
+                      <option key={card.id} value={card.id}>
+                        {card.brand} •••• {card.last4}
+                        {card.isDefault ? " (predefinido)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <label>
                 Valor em Kz
                 <input
@@ -117,7 +145,7 @@ export function WalletPage() {
                   </button>
                 ))}
               </div>
-              <button className="button button-primary button-wide" disabled={busy}>
+              <button className="button button-primary button-wide" disabled={busy || !cardId}>
                 {busy ? "A processar…" : "Adicionar saldo"}{" "}
                 <Icon name="arrow_forward" className="button-icon" />
               </button>
