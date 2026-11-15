@@ -3,6 +3,9 @@ import type { ReactNode } from "react";
 import { Brand } from "../../components/Brand";
 import { Icon, type IconName } from "../../components/Icon";
 
+// A versão mais recente da app móvel, publicada como Release no GitHub.
+const APK_URL = "https://github.com/gkomba/bulir-desafio-03-mobile/releases/latest/download/bulir.apk";
+
 export type Audience = "client" | "provider";
 
 interface Content {
@@ -117,6 +120,9 @@ export function LandingPage({ audience = "client" }: { audience?: Audience }) {
             <Link className="landing-button landing-button-dark" href={signupHref}>{current.primary}<Icon name="arrow_forward" /></Link>
             <ArrowLink className="landing-text-link" href={oppositeHref}>{current.secondary}</ArrowLink>
           </div>
+          <a className="landing-button landing-button-outline landing-apk" href={APK_URL} download>
+            <Icon name="download" />Baixar a app para Android (APK)
+          </a>
           <div className="landing-hero-note"><Icon name="check_circle" /> Uma plataforma para clientes e prestadores em Angola</div>
         </div>
         <div className={`landing-preview landing-preview-${audience}`} aria-label="Pré-visualização da plataforma">

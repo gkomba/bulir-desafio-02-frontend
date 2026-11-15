@@ -330,3 +330,6 @@
   from { opacity: 0; transform: translateY(15px) rotate(1deg) scale(.97); }
   to { opacity: 1; transform: translateY(0) rotate(3deg) scale(1); }
 }
+
+.landing-apk { margin-top: 14px; }
+@media (max-width: 640px) { .landing-apk { width: 100%; } }
